@@ -1,23 +1,22 @@
 package im.ews.zealot
 
-import android.app.Activity
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageInfo
 import android.net.Uri
 import android.os.Build
-import android.util.DisplayMetrics
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 
-class Zealot private constructor(val activity: Activity) {
+class Zealot private constructor(val context: Context) {
     companion object {
         const val BUILD_TYPE = "default"
 
-        fun create(activity: Activity): Zealot {
-            return Zealot(activity)
+        @JvmStatic fun create(context: Context): Zealot {
+            return Zealot(context)
         }
     }
 
@@ -33,10 +32,10 @@ class Zealot private constructor(val activity: Activity) {
 
     private val client = OkHttpClient()
     private val packageName: String
-        get() = activity.packageName
+        get() = context.packageName
 
     private val packageInfo: PackageInfo
-        get() = activity.packageManager.getPackageInfo(packageName, 0)
+        get() = context.packageManager.getPackageInfo(packageName, 0)
 
     private val releaseVersion: String
         get() = packageInfo.versionName
@@ -88,29 +87,22 @@ class Zealot private constructor(val activity: Activity) {
     }
 
     fun showAlert(version: String, changelog: String, installUrl: String)  {
-        val dialog  = AlertDialog.Builder(activity)
+        val dialog  = AlertDialog.Builder(context)
             .setTitle("发现新版本 ${version}️")
             .setMessage(changelog)
             .setNegativeButton("下次再说", null)
             .setPositiveButton("立即更新") { _, _ ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(installUrl))
-                activity.startActivity(intent)
+                context.startActivity(intent)
             }
             .create()
 
         dialog.show()
 
         if (maxHeight == ScreenHeight.HALFSCREEN) {
-            dialog.setMaxHeight((displayMetrics().heightPixels / 2.0f).toInt())
+            dialog.setMaxHeight((context.resources.displayMetrics.heightPixels / 2.0f).toInt())
         }
     }
-
-    private fun displayMetrics(): DisplayMetrics {
-        val displayMetrics = DisplayMetrics()
-        activity.getWindowManager().getDefaultDisplay().getMetrics(displayMetrics)
-        return displayMetrics
-    }
-
 
     private fun channelKey(): String {
         if (channelKeys.size == 0 ) {

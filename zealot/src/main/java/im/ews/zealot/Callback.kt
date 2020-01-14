@@ -1,5 +1,6 @@
 package im.ews.zealot
 
+import android.app.Activity
 import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.Response
@@ -7,7 +8,7 @@ import org.json.JSONException
 import org.json.JSONObject
 import java.io.IOException
 
-class Callback(val context: Zealot): Callback {
+class Callback(val zealot: Zealot): Callback {
 
     override fun onResponse(call: Call, response: Response) {
         response.use {
@@ -51,8 +52,8 @@ class Callback(val context: Zealot): Callback {
             }
             val changelog = changelogList.joinToString("\n")
 
-            context.activity.runOnUiThread {
-                context.showAlert(version, changelog, installUrl)
+            (zealot.context as? Activity)?.runOnUiThread {
+                zealot.showAlert(version, changelog, installUrl)
             }
         } catch (e: JSONException) {
             e.printStackTrace()
