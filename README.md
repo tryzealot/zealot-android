@@ -1,5 +1,7 @@
 # Zealot Android SDK
 
+支持 Kotlin 和 Java 语言编写的 Android 应用。
+
 ## 安装
 
 ### JitPack
@@ -36,10 +38,21 @@ implementation 'im.ews.zealot:zealot:0.1.0'
 在你的 `Application` 文件的 `onCreate` 方法添加启动代码：
 
 ```kotlin
-Zealot.create(this)
-    .setEndpoint("https://zealot.test")
-    .setChannelKey("xxx")
-    .launch()
+// Kotlin
+Zealot.create(getApplication())
+      .setEndpoint("https://zealot.test")
+      .setChannelKey("...")
+      .setBuildType(BuildConfig.BUILD_TYPE)
+      .launch()
+```
+
+```java
+// Java
+Zealot.create(getApplication())
+      .setEndpoint("http://172.16.16.29:3000")
+      .setChannelKey("...")
+      .setBuildType(BuildConfig.BUILD_TYPE)
+      .launch();
 ```
 
 ## 注意
