@@ -56,7 +56,11 @@ class Zealot private constructor(val context: Context) {
         return this
     }
 
-    fun setChannelKey(channelKey: String, buildType: String = BUILD_TYPE): Zealot {
+    fun setChannelKey(channelKey: String): Zealot {
+        return setChannelKey(channelKey, BUILD_TYPE)
+    }
+
+    fun setChannelKey(channelKey: String, buildType: String): Zealot {
         this.channelKeys[buildType] = channelKey
         return this
     }
