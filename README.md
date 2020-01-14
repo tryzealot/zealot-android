@@ -1,6 +1,29 @@
 # Zealot Android SDK
 
-## Installation
+## 安装
+
+### JitPack
+
+使用 [jitpack](https://jitpack.io) 安装，先需要添加 maven 仓库：
+
+```groovy
+allprojects {
+  repositories {
+    ...
+    maven { url 'https://jitpack.io' }
+  }
+}
+```
+
+之后在主 app 项目的 `build.gradle` 添加 zealot：
+
+```groovy
+dependencies {
+  implementation 'com.github.getzealot:zealot-android:master-SNAPSHOT'
+}
+```
+
+### JCenter
 
 > 还未发布暂时不可用
 
@@ -8,9 +31,9 @@
 implementation 'im.ews.zealot:zealot:0.1.0'
 ```
 
-## Usage
+## 使用
 
-In your `Application` class add this line to your `onCreate` method:
+在你的 `Application` 文件的 `onCreate` 方法添加启动代码：
 
 ```kotlin
 Zealot.create(this)
@@ -19,9 +42,9 @@ Zealot.create(this)
     .launch()
 ```
 
-## Note
+## 注意
 
-You need internet permission:
+使用 Zealot SDK 需要开启网络权限
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
