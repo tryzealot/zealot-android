@@ -1,6 +1,6 @@
 # Zealot Android SDK
 
-支持 Kotlin 和 Java 语言编写的 Android 应用。
+Android 组件提供为 Zealot 检查新版本和安装的服务，支持 Kotlin 和 Java。
 
 ## 安装
 
