@@ -13,6 +13,7 @@ import okhttp3.Request
 
 class Zealot private constructor(val context: Context) {
     companion object {
+        const val VERSION = "0.2.0"
         const val BUILD_TYPE = "default"
 
         @JvmStatic fun create(context: Context): Zealot {
@@ -51,6 +52,11 @@ class Zealot private constructor(val context: Context) {
             return versionCode
         }
 
+    private val sdkInfo: String
+        get() {
+            return "android-$VERSION"
+        }
+
     fun setEndpoint(endpoint: String): Zealot {
         this.endpoint = endpoint
         return this
@@ -81,6 +87,7 @@ class Zealot private constructor(val context: Context) {
         urlBuilder.addQueryParameter("release_version", releaseVersion)
         urlBuilder.addQueryParameter("build_version", buildVersion.toString())
         urlBuilder.addQueryParameter("bundle_id", packageName)
+        urlBuilder.addQueryParameter("sdk", sdkInfo)
 
         val url = urlBuilder.build()
         val request = Request.Builder()
