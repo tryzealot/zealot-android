@@ -39,18 +39,38 @@ implementation 'im.ews.zealot:zealot:0.1.0'
 
 ```kotlin
 // Kotlin
+
+// 单个渠道
 Zealot.create(getApplication())
-      .setEndpoint("https://zealot.test")
+      .setEndpoint("https://zealot.com")
       .setChannelKey("...")
+      .setBuildType(BuildConfig.BUILD_TYPE)
+      .launch()
+
+// 多个渠道，比如测试版本，内测版本
+Zealot.create(getApplication())
+      .setEndpoint("https://zealot.com")
+      .setChannelKey("beta", "xxxxxxx")
+      .setCHannelKey("test", "yyyyyyy")
       .setBuildType(BuildConfig.BUILD_TYPE)
       .launch()
 ```
 
 ```java
 // Java
+
+// 单个渠道
 Zealot.create(getApplication())
-      .setEndpoint("http://172.16.16.29:3000")
+      .setEndpoint("https://zealot.com")
       .setChannelKey("...")
+      .setBuildType(BuildConfig.BUILD_TYPE)
+      .launch();
+
+// 多个渠道，比如测试版本，内测版本
+Zealot.create(getApplication())
+      .setEndpoint("https://zealot.com")
+      .setChannelKey("beta", "xxxxxxx")
+      .setCHannelKey("test", "yyyyyyy")
       .setBuildType(BuildConfig.BUILD_TYPE)
       .launch();
 ```
