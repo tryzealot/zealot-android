@@ -7,7 +7,7 @@ final String GROUP_ID = "im.ews.zealot"
 final String VERSION = "0.1.0"
 
 final String DESCRIPTION = "Zealot SDK for Android"
-final String GITHUB_URL = "https://github.com/getzealot/zealot-android"
+final String GITHUB_URL = "https://github.com/tryzealot/zealot-android"
 
 android {
     compileSdkVersion rootProject.ext.compileSdkVersion

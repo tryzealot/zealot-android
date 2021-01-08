@@ -21,7 +21,7 @@ allprojects {
 
 ```groovy
 dependencies {
-  implementation 'com.github.getzealot:zealot-android:master-SNAPSHOT'
+  implementation 'com.github.tryzealot:zealot-android:master-SNAPSHOT'
 }
 ```
 
