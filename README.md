@@ -25,14 +25,6 @@ dependencies {
 }
 ```
 
-### JCenter
-
-> 还未发布暂时不可用
-
-```groovy
-implementation 'im.ews.zealot:zealot:0.1.0'
-```
-
 ## 使用
 
 在你的 `Application` 文件的 `onCreate` 方法添加启动代码：
