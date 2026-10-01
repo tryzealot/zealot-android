@@ -10,6 +10,6 @@
   <string name="check_status_loading">Checking for updates…</string>
   <string name="check_status_missing_input">Enter both the server URL and channel key.</string>
   <string name="check_status_available">Update available: %1$s (%2$s)</string>
-  <string name="check_status_current">This app is up to date.</string>
+  <string name="check_status_current">No newer release for %1$s. Check that this channel contains builds for this application ID.</string>
   <string name="check_status_error">Update check failed: %1$s</string>
 </resources>

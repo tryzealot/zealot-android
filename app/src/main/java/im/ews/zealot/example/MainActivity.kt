@@ -71,7 +71,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 override fun onUpToDate() {
-                    status.setText(R.string.check_status_current)
+                    status.text = getString(R.string.check_status_current, packageName)
                     checkButton.isEnabled = true
                     updateCall = null
                 }

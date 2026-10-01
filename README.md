@@ -172,6 +172,24 @@ Run the library tests and lint checks:
 ./gradlew :zealot:testDebugUnitTest :zealot:lint :app:lint
 ~~~
 
+To verify the live Zealot contract against a channel with at least two Android releases
+of the same app, set the endpoint and channel key for one local test run:
+
+~~~shell
+ZEALOT_TEST_ENDPOINT=https://your-zealot.example.com \
+ZEALOT_TEST_CHANNEL_KEY=your-channel-key \
+./gradlew :zealot:testDebugUnitTest --tests 'im.ews.zealot.ZealotLiveApiTest'
+~~~
+
+The test is skipped when these variables are absent. It finds the newest release and
+an earlier release of the same app, then checks that the older version sees an update,
+the newest version does not, and an invalid channel key fails. The channel key is not
+written to source files or test reports.
+
+The example app sends its own application ID as `bundle_id`. To exercise an existing
+channel in the example app, that channel must contain releases for the example app's
+application ID; entering a channel key for a different app correctly reports no update.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
