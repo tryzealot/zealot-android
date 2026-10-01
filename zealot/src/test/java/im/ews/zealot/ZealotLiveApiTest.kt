@@ -1,5 +1,8 @@
 package im.ews.zealot
 
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.PackageInfo
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.ReleaseResponseParser
 import im.ews.zealot.internal.UpdateRequestFactory
@@ -13,8 +16,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.concurrent.Executor
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit
 
 /**
  * Optional contract check against a real Zealot instance. CI skips it unless both environment
@@ -54,6 +62,26 @@ class ZealotLiveApiTest {
         assertEquals(latestVersion.releaseVersion, available.releaseVersion)
         assertEquals(latestVersion.buildVersion.toString(), available.buildVersion)
         assertTrue(available.installUrl.startsWith("https://"))
+
+        val app = RuntimeEnvironment.getApplication()
+        val installedPackage = PackageInfo().apply {
+            packageName = bundleId
+            versionName = previousVersion.releaseVersion
+            setLongVersionCode(previousVersion.buildVersion)
+        }
+        Shadows.shadowOf(app.packageManager).installPackage(installedPackage)
+        val installedAppContext = object : ContextWrapper(app) {
+            override fun getApplicationContext(): Context = this
+            override fun getPackageName(): String = bundleId
+        }
+        val callbackResults = LinkedBlockingQueue<UpdateResult>()
+        Zealot.create(installedAppContext)
+            .setEndpoint(endpointText)
+            .setChannelKey(channelKey)
+            .setCallbackExecutor(Executor { it.run() })
+            .checkForUpdate { result -> callbackResults.offer(result) }
+        val publicResult = callbackResults.poll(10, TimeUnit.SECONDS)
+        assertEquals(newerReleases, publicResult)
 
         assertEquals(
             UpdateResult.UpToDate,

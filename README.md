@@ -202,8 +202,9 @@ ZEALOT_TEST_CHANNEL_KEY=your-channel-key \
 
 The test is skipped when these variables are absent. It finds the newest release and
 an earlier release of the same app, then checks that the older version sees an update,
-the newest version does not, and an invalid channel key fails. The channel key is not
-written to source files or test reports.
+the newest version does not, and an invalid channel key fails. It also calls the public
+`Zealot.checkForUpdate` API with a simulated installed app at the older version.
+The channel key is not written to source files or test reports.
 
 The example app sends its own application ID as `bundle_id`. To exercise an existing
 channel in the example app, that channel must contain releases for the example app's
