@@ -1,62 +1,95 @@
 package im.ews.zealot
 
-import android.app.Activity
+import im.ews.zealot.internal.ReleaseResponseParser
 import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.Response
 import org.json.JSONException
-import org.json.JSONObject
 import java.io.IOException
+import java.util.concurrent.Executor
 
-class Callback(val zealot: Zealot): Callback {
+/**
+ * Kept public for source and binary compatibility with the original SDK.
+ * New integrations should use [Zealot.checkForUpdate].
+ */
+class Callback(val zealot: Zealot) : okhttp3.Callback {
+    private var updateCallback: UpdateCallback? = null
+    private var showDialog = true
+    private var callbackExecutor: Executor? = null
+    private var presenter: UpdatePresenter? = null
+    private var maxHeight: Zealot.ScreenHeight? = null
+
+    @JvmSynthetic
+    internal fun configure(
+        updateCallback: UpdateCallback?,
+        showDialog: Boolean,
+        callbackExecutor: Executor?,
+        presenter: UpdatePresenter?,
+        maxHeight: Zealot.ScreenHeight
+    ) {
+        this.updateCallback = updateCallback
+        this.showDialog = showDialog
+        this.callbackExecutor = callbackExecutor
+        this.presenter = presenter
+        this.maxHeight = maxHeight
+    }
 
     override fun onResponse(call: Call, response: Response) {
-        response.use {
-            if (!response.isSuccessful) { return }
-
-            generateChangelog(response)
+        val result = try {
+            response.use { closedResponse ->
+                if (!closedResponse.isSuccessful) {
+                    UpdateResult.Error(
+                        UpdateError(
+                            code = UpdateErrorCode.HTTP,
+                            message = "Zealot returned HTTP ${closedResponse.code}",
+                            httpStatusCode = closedResponse.code
+                        )
+                    )
+                } else {
+                    val body = closedResponse.body
+                        ?: throw JSONException("Response body is empty")
+                    val source = body.source()
+                    source.request(MAX_RESPONSE_BYTES + 1L)
+                    if (source.buffer.size > MAX_RESPONSE_BYTES) {
+                        throw JSONException("Zealot response exceeds 1 MiB")
+                    }
+                    val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
+                    ReleaseResponseParser.parse(source.buffer.clone().readString(charset))
+                }
+            }
+        } catch (_: IOException) {
+            UpdateResult.Error(UpdateError(UpdateErrorCode.NETWORK, "Could not read the Zealot response"))
+        } catch (_: JSONException) {
+            invalidResponse()
+        } catch (_: IllegalArgumentException) {
+            invalidResponse()
         }
+
+        zealot.dispatchResult(
+            call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight
+        )
     }
 
     override fun onFailure(call: Call, e: IOException) {
-        // ignore
+        if (call.isCanceled()) return
+        zealot.dispatchResult(
+            call,
+            UpdateResult.Error(UpdateError(UpdateErrorCode.NETWORK, "Could not connect to Zealot")),
+            updateCallback,
+            showDialog,
+            callbackExecutor,
+            presenter,
+            maxHeight
+        )
     }
 
-    private fun generateChangelog(response: Response) {
-        try {
-            val body = response.body()!!.string()
-            val reader = JSONObject(body)
-            val releaseArray = reader.getJSONArray("releases")
+    private fun invalidResponse(): UpdateResult.Error = UpdateResult.Error(
+        UpdateError(
+            code = UpdateErrorCode.INVALID_RESPONSE,
+            message = "Could not parse the Zealot response"
+        )
+    )
 
-            if (releaseArray.length() == 0) { return }
-            var version = ""
-            var installUrl = ""
-            var changelogList = ArrayList<String>()
-
-            for (x in 0 until releaseArray.length()) {
-                val releaseItem = releaseArray[x] as JSONObject
-                if (x.equals(0)) {
-                    val releaseVersion = releaseItem.getString("release_version")
-                    val buildVersion = releaseItem.getString("build_version")
-                    version = "${releaseVersion} (${buildVersion})"
-                    installUrl = releaseItem.getString("install_url")
-                }
-
-                val changelogArray = releaseItem.getJSONArray("changelog")
-                for (y in 0 until changelogArray.length()) {
-                    val changelogItem = changelogArray[y] as JSONObject
-                    val index = "${(y + 1).toString().padStart(2, '0')}"
-                    val message = changelogItem.getString("message")
-                    changelogList.add("${index}. ${message}")
-                }
-            }
-            val changelog = changelogList.joinToString("\n")
-
-            (zealot.context as? Activity)?.runOnUiThread {
-                zealot.showAlert(version, changelog, installUrl)
-            }
-        } catch (e: JSONException) {
-            e.printStackTrace()
-        }
+    private companion object {
+        const val MAX_RESPONSE_BYTES = 1024L * 1024L
     }
 }

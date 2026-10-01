@@ -1,84 +1,177 @@
 # Zealot Android SDK
 
-Android 组件提供为 Zealot 检查新版本和安装的服务，支持 Kotlin 和 Java。
+Android SDK for checking newer releases on a Zealot channel and opening the release page for installation. The SDK supports Kotlin and Java.
 
-## 安装
+## Requirements
 
-### JitPack
+- Android API 21 or newer for the SDK.
+- HTTPS endpoint for the Zealot server.
+- A channel key for the Android application.
+- The INTERNET permission (declared by the consuming application).
 
-使用 [jitpack](https://jitpack.io) 安装，先需要添加 maven 仓库：
+The example application uses AppCompat 1.8, which requires Android API 23 or newer.
 
-```groovy
-allprojects {
-  repositories {
-    ...
-    maven { url 'https://jitpack.io' }
-  }
+## Install
+
+The library is published as the zealot module through JitPack. Add JitPack to the repositories used by your project:
+
+~~~groovy
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
 }
-```
+~~~
 
-之后在主 app 项目的 `build.gradle` 添加 zealot：
+Then add the SDK dependency. Replace YOUR_GITHUB_LOGIN with the owner of the fork and use a tag that exists in that fork:
 
-```groovy
+~~~groovy
 dependencies {
-  implementation 'com.github.tryzealot:zealot-android:master-SNAPSHOT'
+    implementation 'com.github.<YOUR_GITHUB_LOGIN>.zealot-android:zealot:v0.3.0'
 }
-```
+~~~
 
-## 使用
+The fork owner and version above are examples. Confirm that JitPack has built the selected tag before using it. For the original project, use tryzealot as the owner after the release is available there.
 
-在你的 `Application` 文件的 `onCreate` 方法添加启动代码：
+## Permissions
 
-```kotlin
-// Kotlin
+Declare internet access in the consuming app's manifest:
 
-// 单个渠道
-Zealot.create(getActivity())
-      .setEndpoint("https://zealot.com")
-      .setChannelKey("...")
-      .setBuildType(BuildConfig.BUILD_TYPE)
-      .launch()
-
-// 多个渠道，比如测试版本，内测版本
-Zealot.create(getActivity())
-      .setEndpoint("https://zealot.com")
-      .setChannelKey("xxxxxxx", "beta")
-      .setCHannelKey("yyyyyyy", "test")
-      .setBuildType(BuildConfig.BUILD_TYPE)
-      .launch()
-```
-
-```java
-// Java
-
-// 单个渠道
-Zealot.create(getActivity())
-      .setEndpoint("https://zealot.com")
-      .setChannelKey("...")
-      .setBuildType(BuildConfig.BUILD_TYPE)
-      .launch();
-
-// 多个渠道，比如测试版本，内测版本
-Zealot.create(getActivity())
-      .setEndpoint("https://zealot.com")
-      .setChannelKey("xxxxxxx", "beta")
-      .setCHannelKey("yyyyyyy", "test")
-      .setBuildType(BuildConfig.BUILD_TYPE)
-      .launch();
-```
-
-## 注意
-
-使用 Zealot SDK 需要开启网络权限
-
-```xml
+~~~xml
 <uses-permission android:name="android.permission.INTERNET" />
-```
+~~~
 
-## Author
+## Check for an update
 
-icyleaf, icyleaf.cn@gmail.com
+The non-UI API returns the result to the app. Callbacks run on the main thread by default, and the returned OkHttp call can be cancelled. Cancelling also prevents a result already queued for delivery from invoking the callback.
+
+~~~kotlin
+Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setBuildType(BuildConfig.BUILD_TYPE)
+    .checkForUpdate(object : UpdateCallback {
+        override fun onUpdateAvailable(release: ReleaseInfo) {
+            // Show your own UI or open release.installUrl.
+        }
+
+        override fun onUpToDate() {
+            // No newer release is available for this app and channel.
+        }
+
+        override fun onError(error: UpdateError) {
+            // Handle network, HTTP, or invalid-response errors.
+        }
+    })
+~~~
+
+If you keep the returned call, invoke cancel() when the check is no longer needed.
+
+The request uses a shared OkHttp client and has a 30-second call timeout. A timeout is reported through `onError` as a network error.
+
+You can supply an existing OkHttp client to use your app's interceptors, TLS configuration, and timeouts. A callback executor can move result handling off the main thread. Configure these before starting a check; each check uses a snapshot of its settings.
+
+~~~kotlin
+val zealot = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setHttpClient(appOkHttpClient)
+    .setCallbackExecutor(backgroundExecutor)
+
+val call = zealot.checkForUpdate(callback)
+~~~
+
+The app owns the supplied client and executor. The SDK neither shuts them down nor changes their configuration. If the executor rejects a result, the SDK delivers it on the main thread instead.
+
+Java callers can use the same API directly:
+
+~~~java
+Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setBuildType(BuildConfig.BUILD_TYPE)
+    .checkForUpdate(new UpdateCallback() {
+        @Override
+        public void onUpdateAvailable(ReleaseInfo release) {
+            // Open release.getInstallUrl() or show app-specific UI.
+        }
+
+        @Override
+        public void onUpToDate() {
+        }
+
+        @Override
+        public void onError(UpdateError error) {
+            // Handle error.getCode() and error.getMessage().
+        }
+    });
+~~~
+
+## Show the built-in update dialog
+
+The legacy fluent API remains available. Create the client from an Activity so the SDK can show a dialog when a newer release is found:
+
+~~~kotlin
+Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setBuildType(BuildConfig.BUILD_TYPE)
+    .launch()
+~~~
+
+The dialog opens Zealot's install_url with an Android ACTION_VIEW intent. The SDK does not download or install APK files itself. Repeated results do not stack multiple built-in dialogs on the same screen. Calls created with an application context can check releases through checkForUpdate, but cannot show the built-in dialog.
+
+To use your own update UI while retaining `launch()`, set a presenter. Its `present` method runs on the main thread and receives a live Activity. `launch(callback)` additionally reports available, up-to-date, or error results through `UpdateCallback`. Use `checkAndShowUpdate(callback)` when the UI check needs a cancellable `Call` (for example, to cancel it when the screen closes).
+
+~~~kotlin
+Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setUpdatePresenter { activity, release ->
+        // Show your app's update sheet using release.installUrl and release.changelog.
+    }
+    .checkAndShowUpdate(callback)
+~~~
+
+For multiple build types, register one key per type; the default key is used as a fallback:
+
+~~~kotlin
+Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("beta-channel-key", "beta")
+    .setChannelKey("test-channel-key", "test")
+    .setBuildType(BuildConfig.BUILD_TYPE)
+    .launch()
+~~~
+
+The same methods are callable from Java. Implement UpdateCallback with the three methods shown above, or use the fluent launch() API.
+
+## Zealot API
+
+The SDK calls GET /api/apps/latest and sends channel_key, bundle_id, release_version, and build_version. Zealot filters the channel's releases against the installed app version. The current SDK also sends sdk=android-<sdk-version> as client metadata. A successful response with no releases is reported as up to date. Non-2xx responses, network failures, and invalid response data are reported through onError. The first release supplies the install URL and version; changelog entries from all returned releases are combined, as in the original SDK. Responses larger than 1 MiB are rejected.
+
+## Migrating from 0.2.0
+
+The original `create`, `setEndpoint`, `setChannelKey`, `setBuildType`, `setAlertMaxHeight`, `launch`, `showAlert`, and `Callback` entry points remain available. The SDK now requires Android API 21 or newer; applications supporting API 14–20 cannot use this release. The built-in dialog uses the platform `AlertDialog`, with English strings by default and the original Chinese strings for Chinese locales. Endpoint and channel-key setters reject invalid input immediately. To handle update and error states explicitly, use `checkForUpdate(callback)`; for a cancellable check that also shows update UI, use `checkAndShowUpdate(callback)`.
+
+## Development
+
+Use JDK 17 or newer to run the Gradle build. The example app lets you enter your own Zealot server URL and Android channel key at runtime. It shows the update result and cancels an active request if its Activity closes; no key is committed to the repository. Its debug build permits HTTP for local server testing. Use HTTPS for a release build.
+
+Build the library and sample app:
+
+~~~shell
+./gradlew :zealot:assembleDebug :app:assembleDebug
+~~~
+
+Run the library tests and lint checks:
+
+~~~shell
+./gradlew :zealot:testDebugUnitTest :zealot:lint :app:lint
+~~~
 
 ## License
 
-Zealot is available under the MIT license. See the LICENSE file for more info.
+MIT. See [LICENSE](LICENSE).

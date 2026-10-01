@@ -1,18 +1,73 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
-  xmlns:tools="http://schemas.android.com/tools"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/sample_root"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  tools:context=".example.MainActivity">
+  android:fillViewport="true">
 
-  <TextView
-    android:layout_width="wrap_content"
+  <LinearLayout
+    android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:text="Hello World!"
-    app:layout_constraintBottom_toBottomOf="parent"
-    app:layout_constraintLeft_toLeftOf="parent"
-    app:layout_constraintRight_toRightOf="parent"
-    app:layout_constraintTop_toTopOf="parent" />
+    android:orientation="vertical"
+    android:padding="24dp">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:text="@string/app_name"
+      android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:text="@string/sample_intro"
+      android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="24dp"
+      android:labelFor="@id/endpoint"
+      android:text="@string/endpoint_label" />
+
+    <EditText
+      android:id="@+id/endpoint"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:hint="@string/endpoint_hint"
+      android:inputType="textUri"
+      android:singleLine="true" />
+
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:labelFor="@id/channel_key"
+      android:text="@string/channel_key_label" />
+
+    <EditText
+      android:id="@+id/channel_key"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:hint="@string/channel_key_hint"
+      android:inputType="textPassword"
+      android:singleLine="true" />
+
+    <Button
+      android:id="@+id/check_update"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="24dp"
+      android:text="@string/check_update" />
+
+    <TextView
+      android:id="@+id/check_status"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:accessibilityLiveRegion="polite"
+      android:text="@string/check_status_idle" />
+
+  </LinearLayout>
+</ScrollView>

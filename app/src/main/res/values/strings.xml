@@ -1,3 +1,15 @@
 <resources>
-  <string name="app_name">ZealotExample</string>
+  <string name="app_name">Zealot SDK sample</string>
+  <string name="sample_intro">Enter your Zealot server and Android channel key to check for a newer release. The SDK will show an update dialog when one is available.</string>
+  <string name="endpoint_label">Server URL</string>
+  <string name="endpoint_hint">https://zealot.example.com</string>
+  <string name="channel_key_label">Channel key</string>
+  <string name="channel_key_hint">Android channel key</string>
+  <string name="check_update">Check for update</string>
+  <string name="check_status_idle">Ready to check</string>
+  <string name="check_status_loading">Checking for updates…</string>
+  <string name="check_status_missing_input">Enter both the server URL and channel key.</string>
+  <string name="check_status_available">Update available: %1$s (%2$s)</string>
+  <string name="check_status_current">This app is up to date.</string>
+  <string name="check_status_error">Update check failed: %1$s</string>
 </resources>

@@ -1,45 +1,76 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'com.github.dcendents.android-maven'
+plugins {
+    id 'com.android.library'
+    id 'maven-publish'
+}
 
-final String GROUP_ID = "im.ews.zealot"
-final String VERSION = "0.1.0"
+def sdkVersion = '0.3.0'
+def jitpackGroup = System.getenv('GROUP')
 
-final String DESCRIPTION = "Zealot SDK for Android"
-final String GITHUB_URL = "https://github.com/tryzealot/zealot-android"
+group = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
+version = System.getenv('VERSION') ?: sdkVersion
 
 android {
-    compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    namespace = 'im.ews.zealot'
+    compileSdk = 37
 
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        minSdk = 21
+        versionCode = 1
+        versionName = "1.0"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        consumerProguardFiles 'consumer-rules.pro'
+        consumerProguardFiles('consumer-rules.pro')
+        buildConfigField('String', 'ZEALOT_SDK_VERSION', "\"${sdkVersion}\"")
     }
 
-    lintOptions {
-        abortOnError true
+    lint {
+        abortOnError = true
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
     }
 
     compileOptions {
-        sourceCompatibility rootProject.ext.sourceCompatibilityVersion
-        targetCompatibility rootProject.ext.targetCompatibilityVersion
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
     }
+
+    buildFeatures {
+        buildConfig = true
+    }
+
+    publishing {
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation "com.squareup.okhttp3:okhttp:3.14.1"
-    implementation 'androidx.appcompat:appcompat:1.0.0'
-    implementation 'androidx.core:core-ktx:1.0.2'
+    api 'com.squareup.okhttp3:okhttp:5.5.0'
 
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.17'
+    testImplementation 'com.squareup.okhttp3:mockwebserver3:5.5.0'
+}
+
+tasks.withType(Test).configureEach {
+    // Robolectric reflects into FileDescriptor on recent Android SDKs.
+    jvmArgs '--add-exports=java.base/jdk.internal.access=ALL-UNNAMED'
+}
+
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = project.group
+            artifactId = 'zealot'
+            version = project.version
+            afterEvaluate {
+                from components.release
+            }
+        }
+    }
 }
