@@ -13,12 +13,48 @@ import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ZealotHttpTest {
+    @Test
+    fun typedCallbackReportsAvailableCurrentAndHttpError() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse.Builder().code(200).body(
+                    """{"releases":[{"release_version":"2.0","build_version":"12",
+                        "install_url":"https://zealot.example.com/install"}]}"""
+                ).build()
+            )
+            server.enqueue(MockResponse.Builder().code(200).body("""{"releases":[]}""").build())
+            server.enqueue(MockResponse.Builder().code(422).body("""{"error":"invalid"}""").build())
+            server.start()
+
+            val results = LinkedBlockingQueue<UpdateResult>()
+            val zealot = Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setCallbackExecutor(Executor { it.run() })
+
+            repeat(3) {
+                zealot.checkForUpdate { result -> results.offer(result) }
+                val result = results.poll(5, TimeUnit.SECONDS)
+                when (it) {
+                    0 -> assertEquals("2.0", (result as UpdateResult.UpdateAvailable).release.releaseVersion)
+                    1 -> assertEquals(UpdateResult.UpToDate, result)
+                    else -> {
+                        val error = (result as UpdateResult.Error).error
+                        assertEquals(UpdateErrorCode.HTTP, error.code)
+                        assertEquals(422, error.httpStatusCode)
+                    }
+                }
+            }
+        }
+    }
+
     @Test
     fun httpRequestAndReleaseResponseReachPublicCallback() {
         MockWebServer().use { server ->

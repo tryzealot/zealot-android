@@ -25,4 +25,16 @@ final class JavaApiCompilation {
             @Override public void onError(UpdateError error) {}
         });
     }
+
+    static Call checkWithTypedResult(Activity activity) {
+        return Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel")
+            .checkForUpdate(result -> {
+                if (result instanceof UpdateResult.UpdateAvailable) {
+                    ReleaseInfo release = ((UpdateResult.UpdateAvailable) result).getRelease();
+                    release.getInstallUrl();
+                }
+            });
+    }
 }

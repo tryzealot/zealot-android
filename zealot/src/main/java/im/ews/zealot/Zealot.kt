@@ -96,20 +96,20 @@ class Zealot private constructor(context: Context) {
         return this
     }
 
-    /** Uses a caller-owned client for subsequent checks, including its interceptors and timeouts. */
-    fun setHttpClient(client: OkHttpClient): Zealot {
+    /** Uses a caller-owned client; pass null to restore the shared default client. */
+    fun setHttpClient(client: OkHttpClient?): Zealot {
         updateConfiguration { it.copy(httpClient = client) }
         return this
     }
 
-    /** Replaces the built-in dialog for [launch] checks. The presenter runs on the main thread. */
-    fun setUpdatePresenter(presenter: UpdatePresenter): Zealot {
+    /** Replaces the built-in dialog; pass null to restore it. The presenter runs on the main thread. */
+    fun setUpdatePresenter(presenter: UpdatePresenter?): Zealot {
         updateConfiguration { it.copy(presenter = presenter) }
         return this
     }
 
-    /** Sets where [UpdateCallback] methods run. The default is the Android main thread. */
-    fun setCallbackExecutor(executor: Executor): Zealot {
+    /** Sets callback delivery; pass null to restore the Android main thread. */
+    fun setCallbackExecutor(executor: Executor?): Zealot {
         updateConfiguration { it.copy(callbackExecutor = executor) }
         return this
     }
@@ -117,8 +117,16 @@ class Zealot private constructor(context: Context) {
     /** Checks for an update and returns a cancellable OkHttp call. */
     fun checkForUpdate(callback: UpdateCallback): Call = startCheck(callback, showDialog = false)
 
+    /** Checks for an update and reports one typed result. */
+    fun checkForUpdate(callback: UpdateResultCallback): Call =
+        checkForUpdate(callback.asUpdateCallback())
+
     /** Checks, presents an available release, and returns a cancellable OkHttp call. */
     fun checkAndShowUpdate(callback: UpdateCallback): Call = startCheck(callback, showDialog = true)
+
+    /** Checks, presents an available release, and reports one typed result. */
+    fun checkAndShowUpdate(callback: UpdateResultCallback): Call =
+        checkAndShowUpdate(callback.asUpdateCallback())
 
     /** Compatibility entry point: shows an update dialog when created from an Activity. */
     fun launch() {
@@ -128,6 +136,25 @@ class Zealot private constructor(context: Context) {
     /** Shows the update UI and also reports the result to the caller. */
     fun launch(callback: UpdateCallback) {
         checkAndShowUpdate(callback)
+    }
+
+    /** Shows update UI and reports one typed result. */
+    fun launch(callback: UpdateResultCallback) {
+        checkAndShowUpdate(callback)
+    }
+
+    private fun UpdateResultCallback.asUpdateCallback(): UpdateCallback = object : UpdateCallback {
+        override fun onUpdateAvailable(release: ReleaseInfo) {
+            onResult(UpdateResult.UpdateAvailable(release))
+        }
+
+        override fun onUpToDate() {
+            onResult(UpdateResult.UpToDate)
+        }
+
+        override fun onError(error: UpdateError) {
+            onResult(UpdateResult.Error(error))
+        }
     }
 
     private fun startCheck(callback: UpdateCallback?, showDialog: Boolean): Call {

@@ -28,8 +28,22 @@ interface UpdateCallback {
     fun onError(error: UpdateError)
 }
 
-internal sealed class UpdateResult {
+/** One outcome of a Zealot update check. */
+sealed class UpdateResult {
+    /** The channel has no newer release for the installed app. */
     object UpToDate : UpdateResult()
+
+    /** A newer release is available. */
     data class UpdateAvailable(val release: ReleaseInfo) : UpdateResult()
+
+    /** The check failed; this is never reported as [UpToDate]. */
     data class Error(val error: UpdateError) : UpdateResult()
+}
+
+/**
+ * Single-result callback for Kotlin-style state handling or Java lambdas.
+ * Delivery uses the same executor as [UpdateCallback].
+ */
+fun interface UpdateResultCallback {
+    fun onResult(result: UpdateResult)
 }

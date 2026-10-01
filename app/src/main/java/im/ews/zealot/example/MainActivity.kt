@@ -9,9 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import im.ews.zealot.ReleaseInfo
-import im.ews.zealot.UpdateCallback
-import im.ews.zealot.UpdateError
+import im.ews.zealot.UpdateResult
 import im.ews.zealot.Zealot
 import okhttp3.Call
 
@@ -59,29 +57,23 @@ class MainActivity : AppCompatActivity() {
 
             checkButton.isEnabled = false
             status.setText(R.string.check_status_loading)
-            updateCall = zealot.checkAndShowUpdate(object : UpdateCallback {
-                override fun onUpdateAvailable(release: ReleaseInfo) {
-                    status.text = getString(
-                        R.string.check_status_available,
-                        release.releaseVersion,
-                        release.buildVersion
-                    )
-                    checkButton.isEnabled = true
-                    updateCall = null
+            updateCall = zealot.checkAndShowUpdate { result ->
+                when (result) {
+                    is UpdateResult.UpdateAvailable -> {
+                        status.text = getString(
+                            R.string.check_status_available,
+                            result.release.releaseVersion,
+                            result.release.buildVersion
+                        )
+                    }
+                    UpdateResult.UpToDate ->
+                        status.text = getString(R.string.check_status_current, packageName)
+                    is UpdateResult.Error ->
+                        status.text = getString(R.string.check_status_error, result.error.message)
                 }
-
-                override fun onUpToDate() {
-                    status.text = getString(R.string.check_status_current, packageName)
-                    checkButton.isEnabled = true
-                    updateCall = null
-                }
-
-                override fun onError(error: UpdateError) {
-                    status.text = getString(R.string.check_status_error, error.message)
-                    checkButton.isEnabled = true
-                    updateCall = null
-                }
-            })
+                checkButton.isEnabled = true
+                updateCall = null
+            }
         }
     }
 

@@ -69,7 +69,24 @@ Zealot.create(this)
 
 If you keep the returned call, invoke cancel() when the check is no longer needed.
 
-The request uses a shared OkHttp client and has a 30-second call timeout. A timeout is reported through `onError` as a network error.
+For one result handler, use the typed overload. Its three states work well with a
+single `when` expression, and it has the same cancellation and callback-thread behavior:
+
+~~~kotlin
+val call = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .checkForUpdate { result ->
+        when (result) {
+            is UpdateResult.UpdateAvailable -> showRelease(result.release)
+            UpdateResult.UpToDate -> showCurrentVersion()
+            is UpdateResult.Error -> showCheckError(result.error)
+        }
+    }
+~~~
+
+The request uses a shared OkHttp client and has a 30-second call timeout. A timeout is
+reported as a network error through either callback style.
 
 You can supply an existing OkHttp client to use your app's interceptors, TLS configuration, and timeouts. A callback executor can move result handling off the main thread. Configure these before starting a check; each check uses a snapshot of its settings.
 
@@ -84,6 +101,8 @@ val call = zealot.checkForUpdate(callback)
 ~~~
 
 The app owns the supplied client and executor. The SDK neither shuts them down nor changes their configuration. If the executor rejects a result, the SDK delivers it on the main thread instead.
+Pass `null` to `setHttpClient`, `setCallbackExecutor`, or `setUpdatePresenter` to
+restore the defaults for later checks. A check already in progress keeps its settings.
 
 Java callers can use the same API directly:
 
