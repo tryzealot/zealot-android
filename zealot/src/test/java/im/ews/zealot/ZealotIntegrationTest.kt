@@ -14,6 +14,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertThrows
 import org.junit.After
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,6 +31,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
 @RunWith(RobolectricTestRunner::class)
@@ -274,6 +276,31 @@ class ZealotIntegrationTest {
         assertFalse(delivered.get())
         Shadows.shadowOf(Looper.getMainLooper()).idle()
         assertTrue(delivered.get())
+    }
+
+    @Test
+    fun exceptionFromCallbackIsNotTreatedAsExecutorRejection() {
+        val request = Request.Builder().url("https://zealot.example.com/api/apps/latest").build()
+        val invocations = AtomicInteger()
+        val callback = Callback(Zealot.create(activity())).apply {
+            configure(object : UpdateCallback {
+                override fun onUpdateAvailable(release: ReleaseInfo) = Unit
+                override fun onUpToDate() {
+                    invocations.incrementAndGet()
+                    throw RejectedExecutionException("callback failure")
+                }
+                override fun onError(error: UpdateError) = Unit
+            }, false, Executor { it.run() }, null, Zealot.ScreenHeight.AUTOMATIC)
+        }
+
+        assertThrows(RejectedExecutionException::class.java) {
+            callback.onResponse(
+                OkHttpClient().newCall(request),
+                response(request, 200, """{"releases":[]}""")
+            )
+        }
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertEquals(1, invocations.get())
     }
 
     @Test

@@ -19,6 +19,7 @@ import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Checks a Zealot channel for app updates. The original fluent methods remain available.
@@ -216,7 +217,9 @@ class Zealot private constructor(context: Context) {
         }
 
         if (callback != null) {
+            val invoked = AtomicBoolean(false)
             val delivery = Runnable {
+                if (!invoked.compareAndSet(false, true)) return@Runnable
                 if (call.isCanceled()) return@Runnable
                 when (result) {
                     UpdateResult.UpToDate -> callback.onUpToDate()
@@ -229,7 +232,8 @@ class Zealot private constructor(context: Context) {
             } else {
                 try {
                     callbackExecutor.execute(delivery)
-                } catch (_: RejectedExecutionException) {
+                } catch (error: RejectedExecutionException) {
+                    if (invoked.get()) throw error
                     mainHandler.post(delivery)
                 }
             }
