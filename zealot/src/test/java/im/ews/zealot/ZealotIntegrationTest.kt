@@ -1,6 +1,8 @@
 package im.ews.zealot
 
 import android.app.Activity
+import android.app.AlertDialog
+import android.content.Intent
 import android.os.Looper
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
@@ -360,6 +362,24 @@ class ZealotIntegrationTest {
 
         assertFalse(presenterCalled.get())
         assertTrue(callbackCalled.get())
+    }
+
+    @Test
+    fun updateButtonOpensInstallUrl() {
+        val activity = activity()
+        Zealot.create(activity).showAlert(
+            "2.0 (12)",
+            "Changes",
+            "https://zealot.example.com/install/12"
+        )
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        val opened = Shadows.shadowOf(activity).nextStartedActivity
+
+        assertEquals(Intent.ACTION_VIEW, opened.action)
+        assertEquals("https://zealot.example.com/install/12", opened.data.toString())
     }
 
     private fun response(request: Request, code: Int, body: String): Response = Response.Builder()
