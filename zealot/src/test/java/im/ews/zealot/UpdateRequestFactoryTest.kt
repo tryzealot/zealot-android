@@ -23,5 +23,6 @@ class UpdateRequestFactoryTest {
         assertEquals("1.2.3", request.url.queryParameter("release_version"))
         assertEquals("42", request.url.queryParameter("build_version"))
         assertEquals("android-0.3.0", request.url.queryParameter("sdk"))
+        assertEquals("application/json", request.header("Accept"))
     }
 }

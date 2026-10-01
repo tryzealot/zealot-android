@@ -24,6 +24,10 @@ internal object UpdateRequestFactory {
             .addQueryParameter("bundle_id", installed.packageName)
             .addQueryParameter("sdk", "android-$sdkVersion")
             .build()
-        return Request.Builder().url(url).get().build()
+        return Request.Builder()
+            .url(url)
+            .header("Accept", "application/json")
+            .get()
+            .build()
     }
 }
