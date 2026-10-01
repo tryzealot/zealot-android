@@ -68,6 +68,21 @@ publishing {
             groupId = project.group
             artifactId = 'zealot'
             version = project.version
+            pom {
+                name = 'Zealot Android SDK'
+                description = 'Android client for checking and presenting Zealot channel updates.'
+                url = 'https://github.com/tryzealot/zealot-android'
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                scm {
+                    connection = 'scm:git:https://github.com/tryzealot/zealot-android.git'
+                    url = 'https://github.com/tryzealot/zealot-android'
+                }
+            }
             afterEvaluate {
                 from components.release
             }
