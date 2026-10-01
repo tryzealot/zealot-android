@@ -11,7 +11,7 @@ import java.io.IOException
 internal object UpdateResponseReader {
     private const val MAX_RESPONSE_BYTES = 1024L * 1024L
 
-    fun read(response: Response): UpdateResult = try {
+    fun read(response: Response, expectedBundleId: String?): UpdateResult = try {
         response.use { closedResponse ->
             if (!closedResponse.isSuccessful) {
                 UpdateResult.Error(
@@ -30,7 +30,10 @@ internal object UpdateResponseReader {
                     throw JSONException("Zealot response exceeds 1 MiB")
                 }
                 val charset = body.contentType()?.charset(Charsets.UTF_8) ?: Charsets.UTF_8
-                ReleaseResponseParser.parse(source.buffer.clone().readString(charset))
+                ReleaseResponseParser.parse(
+                    source.buffer.clone().readString(charset),
+                    expectedBundleId
+                )
             }
         }
     } catch (_: IOException) {

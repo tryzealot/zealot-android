@@ -33,7 +33,10 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
     }
 
     override fun onResponse(call: Call, response: Response) {
-        val result = UpdateResponseReader.read(response)
+        val result = UpdateResponseReader.read(
+            response,
+            expectedBundleId = call.request().url.queryParameter("bundle_id")
+        )
         zealot.dispatchResult(
             call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight
         )

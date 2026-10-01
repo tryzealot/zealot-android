@@ -61,6 +61,43 @@ class ReleaseResponseParserTest {
     }
 
     @Test(expected = JSONException::class)
+    fun rejectsLatestReleaseForDifferentApp() {
+        ReleaseResponseParser.parse(
+            """{"releases":[{"bundle_id":"com.other.app","release_version":"2.0",
+               "build_version":"12","install_url":"https://zealot.example.com/install"}]}""",
+            expectedBundleId = "com.example.app"
+        )
+    }
+
+    @Test
+    fun ignoresOtherAppsWhenCombiningChangelog() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"bundle_id":"com.example.app","release_version":"3.0",
+               "build_version":"30","install_url":"https://zealot.example.com/install/30",
+               "changelog":[{"message":"Latest change"}]},
+               {"bundle_id":"com.other.app","changelog":[{"message":"Unrelated change"}]},
+               {"bundle_id":"com.example.app","changelog":[{"message":"Earlier change"}]}]}""",
+            expectedBundleId = "com.example.app"
+        )
+
+        assertEquals(
+            "01. Latest change\n01. Earlier change",
+            (result as UpdateResult.UpdateAvailable).release.changelog
+        )
+    }
+
+    @Test
+    fun olderResponsesWithoutBundleIdRemainSupported() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"release_version":"2.0","build_version":"12",
+               "install_url":"https://zealot.example.com/install"}]}""",
+            expectedBundleId = "com.example.app"
+        )
+
+        assertTrue(result is UpdateResult.UpdateAvailable)
+    }
+
+    @Test(expected = JSONException::class)
     fun rejectsNonHttpInstallUrl() {
         ReleaseResponseParser.parse(
             """{"releases":[{"release_version":"2.0","build_version":"12",

@@ -127,4 +127,37 @@ class ZealotHttpTest {
             assertFalse(capturedError.get().toString().contains("channel-key-super-secret"))
         }
     }
+
+    @Test
+    fun wrongAppReleaseAfterRedirectIsReportedAsInvalidResponse() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse.Builder().code(302)
+                    .addHeader("Location", "/redirected")
+                    .build()
+            )
+            server.enqueue(
+                MockResponse.Builder().code(200).body(
+                    """{"releases":[{"bundle_id":"com.other.app","release_version":"2.0",
+                        "build_version":"12",
+                        "install_url":"https://zealot.example.com/install"}]}"""
+                ).build()
+            )
+            server.start()
+            val results = LinkedBlockingQueue<UpdateResult>()
+            Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setCallbackExecutor(Executor { it.run() })
+                .checkForUpdate { result -> results.offer(result) }
+
+            val result = results.poll(5, TimeUnit.SECONDS) as UpdateResult.Error
+            assertEquals(UpdateErrorCode.INVALID_RESPONSE, result.error.code)
+            assertEquals(
+                RuntimeEnvironment.getApplication().packageName,
+                server.takeRequest(5, TimeUnit.SECONDS)!!.url.queryParameter("bundle_id")
+            )
+            assertNull(server.takeRequest(5, TimeUnit.SECONDS)!!.url.queryParameter("bundle_id"))
+        }
+    }
 }
