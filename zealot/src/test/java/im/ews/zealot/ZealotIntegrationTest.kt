@@ -304,6 +304,56 @@ class ZealotIntegrationTest {
     }
 
     @Test
+    fun executorRejectionAfterDeliveryDoesNotCrashOrRedeliver() {
+        val request = Request.Builder().url("https://zealot.example.com/api/apps/latest").build()
+        val invocations = AtomicInteger()
+        val callback = Callback(Zealot.create(activity())).apply {
+            configure(object : UpdateCallback {
+                override fun onUpdateAvailable(release: ReleaseInfo) = Unit
+                override fun onUpToDate() { invocations.incrementAndGet() }
+                override fun onError(error: UpdateError) = Unit
+            }, false, Executor {
+                it.run()
+                throw RejectedExecutionException("executor failed after delivery")
+            }, null, Zealot.ScreenHeight.AUTOMATIC)
+        }
+
+        callback.onResponse(
+            OkHttpClient().newCall(request),
+            response(request, 200, """{"releases":[]}""")
+        )
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(1, invocations.get())
+    }
+
+    @Test
+    fun executorThatQueuesThenRejectsStillDeliversOnce() {
+        val request = Request.Builder().url("https://zealot.example.com/api/apps/latest").build()
+        val queued = AtomicReference<Runnable>()
+        val invocations = AtomicInteger()
+        val callback = Callback(Zealot.create(activity())).apply {
+            configure(object : UpdateCallback {
+                override fun onUpdateAvailable(release: ReleaseInfo) = Unit
+                override fun onUpToDate() { invocations.incrementAndGet() }
+                override fun onError(error: UpdateError) = Unit
+            }, false, Executor {
+                queued.set(it)
+                throw RejectedExecutionException("executor rejected after queuing")
+            }, null, Zealot.ScreenHeight.AUTOMATIC)
+        }
+
+        callback.onResponse(
+            OkHttpClient().newCall(request),
+            response(request, 200, """{"releases":[]}""")
+        )
+        queued.get().run()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertEquals(1, invocations.get())
+    }
+
+    @Test
     fun oversizedResponseIsRejected() {
         val activity = activity()
         val request = Request.Builder().url("https://zealot.example.com/api/apps/latest").build()

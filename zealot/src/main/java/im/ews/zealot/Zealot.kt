@@ -20,6 +20,7 @@ import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Checks a Zealot channel for app updates. The original fluent methods remain available.
@@ -245,13 +246,19 @@ class Zealot private constructor(context: Context) {
 
         if (callback != null) {
             val invoked = AtomicBoolean(false)
+            val callbackRejection = AtomicReference<RejectedExecutionException?>()
             val delivery = Runnable {
                 if (!invoked.compareAndSet(false, true)) return@Runnable
                 if (call.isCanceled()) return@Runnable
-                when (result) {
-                    UpdateResult.UpToDate -> callback.onUpToDate()
-                    is UpdateResult.UpdateAvailable -> callback.onUpdateAvailable(result.release)
-                    is UpdateResult.Error -> callback.onError(result.error)
+                try {
+                    when (result) {
+                        UpdateResult.UpToDate -> callback.onUpToDate()
+                        is UpdateResult.UpdateAvailable -> callback.onUpdateAvailable(result.release)
+                        is UpdateResult.Error -> callback.onError(result.error)
+                    }
+                } catch (error: RejectedExecutionException) {
+                    callbackRejection.set(error)
+                    throw error
                 }
             }
             if (callbackExecutor == null) {
@@ -260,8 +267,8 @@ class Zealot private constructor(context: Context) {
                 try {
                     callbackExecutor.execute(delivery)
                 } catch (error: RejectedExecutionException) {
-                    if (invoked.get()) throw error
-                    mainHandler.post(delivery)
+                    if (callbackRejection.get() === error) throw error
+                    if (!invoked.get()) mainHandler.post(delivery)
                 }
             }
         }

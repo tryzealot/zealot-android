@@ -100,7 +100,7 @@ val zealot = Zealot.create(this)
 val call = zealot.checkForUpdate(callback)
 ~~~
 
-The app owns the supplied client and executor. The SDK neither shuts them down nor changes their configuration. If the executor rejects a result, the SDK delivers it on the main thread instead.
+The app owns the supplied client and executor. The SDK neither shuts them down nor changes their configuration. If the executor rejects a result before delivery, the SDK falls back to the main thread. A result is delivered at most once even if a faulty executor queues the task and then reports rejection.
 Pass `null` to `setHttpClient`, `setCallbackExecutor`, or `setUpdatePresenter` to
 restore the defaults for later checks. A check already in progress keeps its settings.
 
