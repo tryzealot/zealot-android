@@ -406,10 +406,48 @@ class ZealotIntegrationTest {
         zealot.showAlert("2.0", "Changes", "https://zealot.example.com/install")
         Zealot.create(activity).showAlert("2.0", "Changes", "https://zealot.example.com/install")
         assertEquals(before + 1, ShadowDialog.getShownDialogs().size)
+        assertEquals(
+            ShadowDialog.getLatestDialog(),
+            activity.window.decorView.getTag(R.id.zealot_visible_dialog)
+        )
 
         ShadowDialog.getLatestDialog().dismiss()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        assertNull(activity.window.decorView.getTag(R.id.zealot_visible_dialog))
         zealot.showAlert("2.0", "Changes", "https://zealot.example.com/install")
         assertEquals(before + 2, ShadowDialog.getShownDialogs().size)
+    }
+
+    @Test
+    fun destroyingActivityDismissesUpdateDialog() {
+        val activity = activity()
+        Zealot.create(activity).showAlert(
+            "2.0", "Changes", "https://zealot.example.com/install"
+        )
+        val dialog = ShadowDialog.getLatestDialog()
+        assertTrue(dialog.isShowing)
+
+        activities.removeAt(activities.lastIndex).pause().stop().destroy()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(dialog.isShowing)
+    }
+
+    @Test
+    fun delayedDismissalOfOldDialogDoesNotClearNewDialog() {
+        val activity = activity()
+        val zealot = Zealot.create(activity)
+        zealot.showAlert("2.0", "Changes", "https://zealot.example.com/install")
+        val first = ShadowDialog.getLatestDialog()
+        first.dismiss()
+
+        zealot.showAlert("3.0", "More changes", "https://zealot.example.com/install")
+        val second = ShadowDialog.getLatestDialog()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        assertFalse(first.isShowing)
+        assertTrue(second.isShowing)
+        assertEquals(second, activity.window.decorView.getTag(R.id.zealot_visible_dialog))
     }
 
     @Test

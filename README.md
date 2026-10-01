@@ -140,7 +140,7 @@ Zealot.create(this)
     .launch()
 ~~~
 
-The dialog opens Zealot's install_url with an Android ACTION_VIEW intent. The SDK does not download or install APK files itself. Repeated results do not stack multiple built-in dialogs on the same screen. Calls created with an application context can check releases through checkForUpdate, but cannot show the built-in dialog.
+The dialog opens Zealot's install_url with an Android ACTION_VIEW intent. The SDK does not download or install APK files itself. Repeated results do not stack multiple built-in dialogs on the same screen, and the dialog closes when the Activity window detaches. Calls created with an application context can check releases through checkForUpdate, but cannot show the built-in dialog.
 
 To use your own update UI while retaining `launch()`, set a presenter. Its `present` method runs on the main thread and receives a live Activity. `launch(callback)` additionally reports available, up-to-date, or error results through `UpdateCallback`. Use `checkAndShowUpdate(callback)` when the UI check needs a cancellable `Call` (for example, to cancel it when the screen closes).
 

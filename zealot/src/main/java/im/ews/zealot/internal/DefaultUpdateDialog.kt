@@ -5,17 +5,14 @@ import android.app.AlertDialog
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
+import android.view.View
 import android.view.WindowManager
 import im.ews.zealot.R
 import im.ews.zealot.Zealot
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
-import java.lang.ref.WeakReference
-import java.util.WeakHashMap
 
 /** Optional Android UI for applications that use the original [Zealot.launch] flow. */
 internal object DefaultUpdateDialog {
-    private val visibleDialogs = WeakHashMap<Activity, WeakReference<AlertDialog>>()
-
     fun show(
         activity: Activity,
         version: String,
@@ -25,7 +22,10 @@ internal object DefaultUpdateDialog {
     ): AlertDialog? {
         if (activity.isFinishing || activity.isDestroyed) return null
         if (installUrl.toHttpUrlOrNull() == null) return null
-        if (visibleDialogs[activity]?.get()?.isShowing == true) return null
+        val decorView = activity.window.decorView
+        if ((decorView.getTag(R.id.zealot_visible_dialog) as? AlertDialog)?.isShowing == true) {
+            return null
+        }
 
         val dialog = AlertDialog.Builder(activity)
             .setTitle(activity.getString(R.string.zealot_update_title, version))
@@ -40,11 +40,25 @@ internal object DefaultUpdateDialog {
                 }
             }
             .create()
+        val detachListener = object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) = Unit
+            override fun onViewDetachedFromWindow(view: View) {
+                dialog.dismiss()
+            }
+        }
+        dialog.setOnDismissListener {
+            decorView.removeOnAttachStateChangeListener(detachListener)
+            if (decorView.getTag(R.id.zealot_visible_dialog) === dialog) {
+                decorView.setTag(R.id.zealot_visible_dialog, null)
+            }
+        }
 
         try {
             dialog.show()
-            visibleDialogs[activity] = WeakReference(dialog)
+            decorView.addOnAttachStateChangeListener(detachListener)
+            decorView.setTag(R.id.zealot_visible_dialog, dialog)
         } catch (_: WindowManager.BadTokenException) {
+            decorView.removeOnAttachStateChangeListener(detachListener)
             // The Activity can lose its window while the asynchronous request is running.
             return null
         }
