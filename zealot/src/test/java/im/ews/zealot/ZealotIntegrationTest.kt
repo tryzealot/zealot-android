@@ -568,6 +568,23 @@ class ZealotIntegrationTest {
         assertEquals("https://zealot.example.com/install/12", opened.data.toString())
     }
 
+    @Test
+    fun updateButtonOpensTheValidatedNormalizedUrl() {
+        val activity = activity()
+        Zealot.create(activity).showAlert(
+            "2.0 (12)",
+            "",
+            " https://zealot.example.com/install/12 "
+        )
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        val opened = Shadows.shadowOf(activity).nextStartedActivity
+
+        assertEquals("https://zealot.example.com/install/12", opened.data.toString())
+    }
+
     private fun response(request: Request, code: Int, body: String): Response = Response.Builder()
         .request(request)
         .protocol(Protocol.HTTP_1_1)

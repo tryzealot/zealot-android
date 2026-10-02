@@ -23,7 +23,7 @@ internal object DefaultUpdateDialog {
         options: UpdateDialogOptions
     ): AlertDialog? {
         if (activity.isFinishing || activity.isDestroyed) return null
-        if (installUrl.toHttpUrlOrNull() == null) return null
+        val parsedInstallUrl = installUrl.toHttpUrlOrNull() ?: return null
         val decorView = activity.window.decorView
         if ((decorView.getTag(R.id.zealot_visible_dialog) as? AlertDialog)?.isShowing == true) {
             return null
@@ -31,10 +31,10 @@ internal object DefaultUpdateDialog {
 
         val dialog = AlertDialog.Builder(activity)
             .setTitle(options.title ?: activity.getString(R.string.zealot_update_title, version))
-            .setMessage(changelog)
+            .apply { if (changelog.isNotBlank()) setMessage(changelog) }
             .setNegativeButton(options.laterButtonText ?: activity.getString(R.string.zealot_update_later), null)
             .setPositiveButton(options.updateButtonText ?: activity.getString(R.string.zealot_update_now)) { _, _ ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(installUrl))
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(parsedInstallUrl.toString()))
                 try {
                     activity.startActivity(intent)
                 } catch (_: ActivityNotFoundException) {
