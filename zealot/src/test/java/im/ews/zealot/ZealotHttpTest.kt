@@ -22,6 +22,45 @@ import java.util.concurrent.atomic.AtomicReference
 @Config(sdk = [34])
 class ZealotHttpTest {
     @Test
+    fun repeatedChecksReleaseAndReuseConnectionAfterInvalidJsonAndHttpError() {
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse.Builder().body("""{"releases":[]}""").build())
+            server.enqueue(MockResponse.Builder().body("invalid json").build())
+            server.enqueue(MockResponse.Builder().code(503).body("unavailable").build())
+            server.enqueue(MockResponse.Builder().body("""{"releases":[]}""").build())
+            server.start()
+
+            val client = OkHttpClient()
+            val results = LinkedBlockingQueue<UpdateResult>()
+            val zealot = Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setHttpClient(client)
+                .setCallbackExecutor(Executor { it.run() })
+            val expectedResults = listOf(
+                UpdateResult.UpToDate,
+                UpdateResult.Error(UpdateError(
+                    UpdateErrorCode.INVALID_RESPONSE, "Could not parse the Zealot response"
+                )),
+                UpdateResult.Error(UpdateError(
+                    UpdateErrorCode.HTTP, "Zealot returned HTTP 503", 503
+                )),
+                UpdateResult.UpToDate
+            )
+
+            expectedResults.forEachIndexed { index, expected ->
+                zealot.checkForUpdate { result -> results.offer(result) }
+                assertEquals(expected, results.poll(5, TimeUnit.SECONDS))
+                val request = requireNotNull(server.takeRequest(5, TimeUnit.SECONDS))
+                assertEquals("Response must release its connection", 1,
+                    client.connectionPool.idleConnectionCount())
+                assertEquals("Checks must reuse the same socket", 0, request.connectionIndex)
+                assertEquals(index, request.exchangeIndex)
+            }
+        }
+    }
+
+    @Test
     fun callTimeoutIsReportedAsNetworkError() {
         MockWebServer().use { server ->
             server.enqueue(
