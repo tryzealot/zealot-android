@@ -204,14 +204,17 @@ entries from matching releases are combined in
 that order, with exact duplicate messages shown once. When a release includes a
 concrete bundle_id, the SDK checks it against the installed app before showing
 an update. Responses without this field or with `null` remain supported;
-malformed bundle IDs are rejected. Responses larger than
-1 MiB are rejected.
+malformed bundle IDs are rejected. Responses larger than 1 MiB are rejected.
 
 ## Migrating from 0.2.0
 
 The original `create`, `setEndpoint`, `setChannelKey`, `setBuildType`, `setAlertMaxHeight`, `launch`, `showAlert`, and `Callback` entry points remain available. The SDK now requires Android API 21 or newer; applications supporting API 14–20 cannot use this release. The built-in dialog uses the platform `AlertDialog`, with English strings by default and the original Chinese strings for Chinese locales. Endpoint and channel-key setters reject invalid input immediately. To handle update and error states explicitly, use `checkForUpdate(callback)`; for a cancellable check that also shows update UI, use `checkAndShowUpdate(callback)`.
 
 ## Development
+
+The public `Zealot` class holds a snapshot of each check's configuration. Request
+construction, response parsing, result delivery, and the optional dialog live in
+separate internal components, so non-UI checks do not depend on presentation.
 
 Use JDK 17 or newer to run the Gradle build. The example app lets you enter your own Zealot server URL and Android channel key at runtime. It shows the update result and cancels an active request if its Activity closes; no key is committed to the repository. Its debug build permits HTTP for local server testing. Use HTTPS for a release build.
 

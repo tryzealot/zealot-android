@@ -10,6 +10,7 @@ import android.os.Looper
 import im.ews.zealot.internal.DefaultUpdateDialog
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.UpdateRequestFactory
+import im.ews.zealot.internal.UpdateResultDispatcher
 import im.ews.zealot.internal.UserCancellableCall
 import okhttp3.Call
 import okhttp3.HttpUrl
@@ -18,10 +19,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.lang.ref.WeakReference
 import java.util.concurrent.Executor
-import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Checks a Zealot channel for app updates. The original fluent methods remain available.
@@ -65,6 +64,7 @@ class Zealot private constructor(context: Context) {
     private val configurationLock = Any()
     @Volatile private var configuration = Configuration()
     private val mainHandler by lazy { Handler(Looper.getMainLooper()) }
+    private val resultDispatcher by lazy { UpdateResultDispatcher(activityReference, mainHandler) }
 
     fun setEndpoint(endpoint: String): Zealot {
         val parsed = endpoint.trim().trimEnd('/').toHttpUrlOrNull()
@@ -241,55 +241,10 @@ class Zealot private constructor(context: Context) {
         dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
         cancelledByUser: AtomicBoolean? = null
     ) {
-        fun isUserCancelled(): Boolean = cancelledByUser?.get() ?: call.isCanceled()
-        if (showDialog && result is UpdateResult.UpdateAvailable) {
-            mainHandler.post {
-                if (isUserCancelled()) return@post
-                val activity = activityReference?.get() ?: return@post
-                if (activity.isFinishing || activity.isDestroyed) return@post
-                val release = result.release
-                if (presenter != null) {
-                    presenter.present(activity, release)
-                } else {
-                    showAlertOnMain(
-                        "${release.releaseVersion} (${release.buildVersion})",
-                        release.changelog,
-                        release.installUrl,
-                        maxHeight ?: configuration.maxHeight,
-                        dialogOptions
-                    )
-                }
-            }
-        }
-
-        if (callback != null) {
-            val invoked = AtomicBoolean(false)
-            val callbackRejection = AtomicReference<RejectedExecutionException?>()
-            val delivery = Runnable {
-                if (!invoked.compareAndSet(false, true)) return@Runnable
-                if (isUserCancelled()) return@Runnable
-                try {
-                    when (result) {
-                        UpdateResult.UpToDate -> callback.onUpToDate()
-                        is UpdateResult.UpdateAvailable -> callback.onUpdateAvailable(result.release)
-                        is UpdateResult.Error -> callback.onError(result.error)
-                    }
-                } catch (error: RejectedExecutionException) {
-                    callbackRejection.set(error)
-                    throw error
-                }
-            }
-            if (callbackExecutor == null) {
-                mainHandler.post(delivery)
-            } else {
-                try {
-                    callbackExecutor.execute(delivery)
-                } catch (error: RejectedExecutionException) {
-                    if (callbackRejection.get() === error) throw error
-                    if (!invoked.get()) mainHandler.post(delivery)
-                }
-            }
-        }
+        resultDispatcher.dispatch(
+            call, result, callback, showDialog, callbackExecutor, presenter,
+            maxHeight ?: configuration.maxHeight, dialogOptions, cancelledByUser
+        )
     }
 
     /** Shows the built-in dialog. Calls from a background thread are posted to the main thread. */
