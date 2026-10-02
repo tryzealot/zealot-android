@@ -35,7 +35,7 @@
       android:id="@+id/endpoint"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:hint="@string/endpoint_hint"
+      android:autofillHints="url"
       android:inputType="textUri"
       android:singleLine="true" />
 
@@ -50,7 +50,7 @@
       android:id="@+id/channel_key"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:hint="@string/channel_key_hint"
+      android:importantForAutofill="no"
       android:inputType="textPassword"
       android:singleLine="true" />
 
