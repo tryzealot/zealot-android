@@ -41,23 +41,27 @@ internal object ReleaseResponseParser {
 
     private fun buildChangelog(releases: JSONArray, expectedBundleId: String?): String {
         val messages = mutableListOf<String>()
+        val seenMessages = mutableSetOf<String>()
         for (releaseIndex in 0 until releases.length()) {
             val release = releases.optJSONObject(releaseIndex) ?: continue
             if (!matchesBundleId(release, expectedBundleId)) continue
             val entries = release.optJSONArray("changelog")
-            val beforeRelease = messages.size
+            var hasValidEntry = false
             if (entries != null) {
                 for (entryIndex in 0 until entries.length()) {
                     val message = entries.optJSONObject(entryIndex)
                         ?.let { optionalText(it, "message") }.orEmpty()
                     if (message.isNotEmpty()) {
-                        messages += "${(entryIndex + 1).toString().padStart(2, '0')}. $message"
+                        hasValidEntry = true
+                        if (seenMessages.add(message)) {
+                            messages += "${(entryIndex + 1).toString().padStart(2, '0')}. $message"
+                        }
                     }
                 }
             }
-            if (messages.size == beforeRelease) {
+            if (!hasValidEntry) {
                 val text = optionalText(release, "text_changelog").orEmpty()
-                if (text.isNotEmpty()) messages += text
+                if (text.isNotEmpty() && seenMessages.add(text)) messages += text
             }
         }
         return messages.joinToString("\n")

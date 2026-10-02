@@ -60,6 +60,41 @@ class ReleaseResponseParserTest {
         assertEquals("01. Latest change\n01. Earlier change", release.changelog)
     }
 
+    @Test
+    fun repeatedChangelogMessagesAppearOnlyOnceInNewestFirstOrder() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"release_version":"3.0","build_version":"30",
+               "install_url":"https://zealot.example.com/install/30",
+               "changelog":[{"message":"Fixed login"},{"message":"Improved sync"}]},
+               {"release_version":"2.0","build_version":"20",
+               "install_url":"https://zealot.example.com/install/20",
+               "changelog":[{"message":" Fixed login "},{"message":"Added export"}]}]}"""
+        )
+
+        assertEquals(
+            "01. Fixed login\n02. Improved sync\n02. Added export",
+            (result as UpdateResult.UpdateAvailable).release.changelog
+        )
+    }
+
+    @Test
+    fun duplicateStructuredEntriesDoNotTriggerTextFallback() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"release_version":"3.0","build_version":"30",
+               "install_url":"https://zealot.example.com/install/30",
+               "changelog":[{"message":"Fixed login"}]},
+               {"release_version":"2.0","build_version":"20",
+               "install_url":"https://zealot.example.com/install/20",
+               "changelog":[{"message":"Fixed login"}],
+               "text_changelog":"Fixed login"}]}"""
+        )
+
+        assertEquals(
+            "01. Fixed login",
+            (result as UpdateResult.UpdateAvailable).release.changelog
+        )
+    }
+
     @Test(expected = JSONException::class)
     fun rejectsLatestReleaseForDifferentApp() {
         ReleaseResponseParser.parse(

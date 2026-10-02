@@ -196,7 +196,13 @@ The same methods are callable from Java. Implement UpdateCallback with the three
 
 The SDK calls GET /api/apps/latest and sends channel_key, bundle_id, release_version, and build_version. Zealot filters the channel's releases against the installed app version. The current SDK also sends sdk=android-<sdk-version> as client metadata. A successful response with no releases is reported as up to date. Non-2xx responses, network failures, and invalid response data are reported through onError.
 
-The first release supplies the install URL and version; changelog entries from matching releases are combined. When a release includes a concrete bundle_id, the SDK checks it against the installed app before showing an update. Responses without this field remain supported. Responses larger than 1 MiB are rejected.
+The first release supplies the install URL and version; for the versioned request
+sent by this SDK, Zealot returns newer releases in newest-first order. Changelog
+entries from matching releases are combined in
+that order, with exact duplicate messages shown once. When a release includes a
+concrete bundle_id, the SDK checks it against the installed app before showing
+an update. Responses without this field remain supported. Responses larger than
+1 MiB are rejected.
 
 ## Migrating from 0.2.0
 
