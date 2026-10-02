@@ -56,7 +56,7 @@ class ZealotHttpTest {
                 MockResponse.Builder()
                     .code(200)
                     .body("""{"releases":[]}""")
-                    .bodyDelay(1, TimeUnit.SECONDS)
+                    .bodyDelay(2, TimeUnit.SECONDS)
                     .build()
             )
             server.start()
@@ -71,7 +71,7 @@ class ZealotHttpTest {
             assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
             call.cancel()
             assertTrue(call.isCanceled())
-            assertNull(results.poll(2, TimeUnit.SECONDS))
+            assertNull(results.poll(1, TimeUnit.SECONDS))
         }
     }
 
