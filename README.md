@@ -207,6 +207,21 @@ and `VERSION` for both commands. For example, use
 `GROUP=com.github.YourName VERSION=v0.3.0`; the consumer will then resolve
 `com.github.YourName.zealot-android:zealot:v0.3.0` from Maven Local.
 
+The debug consumer also runs on Android API 21. To exercise it on an emulator,
+start `python3 publication-smoke/mock_server.py` in another terminal, then run:
+
+~~~shell
+adb -s <serial> reverse tcp:18766 tcp:18766
+adb -s <serial> install -r publication-smoke/build/outputs/apk/debug/zealot-publication-smoke-debug.apk
+adb -s <serial> shell am start -n im.ews.zealot.publicationsmoke/.ConsumerActivity \
+  --es zealot.endpoint http://127.0.0.1:18766/available \
+  --es zealot.channel_key demo
+~~~
+
+The screen shows `Update available: 2.0`. Change `/available` to `/current` or
+`/error` to exercise the other outcomes. Only this test app's debug variant
+permits HTTP.
+
 To verify the live Zealot contract against a channel with at least two Android releases
 of the same app, set the endpoint and channel key for one local test run:
 
