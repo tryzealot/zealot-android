@@ -129,6 +129,9 @@ class Zealot private constructor(context: Context) {
     fun checkForUpdate(callback: UpdateResultCallback): Call =
         checkForUpdate(callback.asUpdateCallback())
 
+    /** Checks and presents an available release without a callback; cancel the returned call when needed. */
+    fun checkAndShowUpdate(): Call = startCheck(null, showDialog = true)
+
     /** Checks, presents an available release, and returns a cancellable OkHttp call. */
     fun checkAndShowUpdate(callback: UpdateCallback): Call = startCheck(callback, showDialog = true)
 
@@ -138,7 +141,7 @@ class Zealot private constructor(context: Context) {
 
     /** Compatibility entry point: shows an update dialog when created from an Activity. */
     fun launch() {
-        startCheck(null, showDialog = true)
+        checkAndShowUpdate()
     }
 
     /** Shows the update UI and also reports the result to the caller. */

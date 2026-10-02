@@ -38,4 +38,11 @@ final class JavaApiCompilation {
                 }
             });
     }
+
+    static Call checkAndShowWithoutCallback(Activity activity) {
+        return Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel")
+            .checkAndShowUpdate();
+    }
 }

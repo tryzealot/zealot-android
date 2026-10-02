@@ -13,7 +13,8 @@ The example application uses AppCompat 1.8, which requires Android API 23 or new
 
 ## Install
 
-The library is published as the zealot module through JitPack. Add JitPack to the repositories used by your project:
+The library is configured to publish the `zealot` module through JitPack. After
+building a tag in your fork, add JitPack to the repositories used by your project:
 
 ~~~groovy
 dependencyResolutionManagement {
@@ -140,6 +141,10 @@ Zealot.create(this)
     .launch()
 ~~~
 
+If the screen owns the check, use `checkAndShowUpdate()` to keep its cancellable
+`Call` and cancel it when the screen closes. This UI-only overload needs no callback.
+The legacy `launch()` remains available for existing callers.
+
 The dialog opens Zealot's install_url with an Android ACTION_VIEW intent. The SDK does not download or install APK files itself. Repeated results do not stack multiple built-in dialogs on the same screen, and the dialog closes when the Activity window detaches. Calls created with an application context can check releases through checkForUpdate, but cannot show the built-in dialog.
 
 For small changes to the built-in dialog, set `UpdateDialogOptions` before checking.
@@ -162,7 +167,7 @@ Zealot.create(this)
     .launch()
 ~~~
 
-To use your own update UI while retaining `launch()`, set a presenter. Its `present` method runs on the main thread and receives a live Activity. `launch(callback)` additionally reports available, up-to-date, or error results through `UpdateCallback`. Use `checkAndShowUpdate(callback)` when the UI check needs a cancellable `Call` (for example, to cancel it when the screen closes).
+To use your own update UI while retaining `launch()`, set a presenter. Its `present` method runs on the main thread and receives a live Activity. `launch(callback)` additionally reports available, up-to-date, or error results through `UpdateCallback`. Use `checkAndShowUpdate(callback)` when the UI check needs both a result callback and a cancellable `Call`.
 
 ~~~kotlin
 Zealot.create(this)

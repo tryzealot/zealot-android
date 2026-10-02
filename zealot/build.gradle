@@ -7,6 +7,10 @@ def versionProperties = new Properties()
 rootProject.file('version.properties').withInputStream { versionProperties.load(it) }
 def sdkVersion = versionProperties.getProperty('sdkVersion')
 def jitpackGroup = System.getenv('GROUP')
+def repositoryOwner = jitpackGroup?.startsWith('com.github.')
+    ? jitpackGroup.substring('com.github.'.length())
+    : 'tryzealot'
+def repositoryUrl = "https://github.com/${repositoryOwner}/zealot-android"
 
 group = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
 version = System.getenv('VERSION') ?: sdkVersion
@@ -73,7 +77,7 @@ publishing {
             pom {
                 name = 'Zealot Android SDK'
                 description = 'Android client for checking and presenting Zealot channel updates.'
-                url = 'https://github.com/tryzealot/zealot-android'
+                url = repositoryUrl
                 licenses {
                     license {
                         name = 'MIT License'
@@ -81,8 +85,8 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:https://github.com/tryzealot/zealot-android.git'
-                    url = 'https://github.com/tryzealot/zealot-android'
+                    connection = "scm:git:${repositoryUrl}.git"
+                    url = repositoryUrl
                 }
             }
             afterEvaluate {
