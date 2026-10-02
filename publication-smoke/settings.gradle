@@ -9,7 +9,21 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        mavenLocal()
+        def sdkRepository = providers.gradleProperty('zealotRepository').orElse('local').get()
+        if (sdkRepository == 'local') {
+            mavenLocal()
+        } else if (sdkRepository == 'jitpack') {
+            def jitpackGroup = System.getenv('GROUP')
+            if (!jitpackGroup?.startsWith('com.github.')) {
+                throw new GradleException('Set GROUP=com.github.<fork-owner> when testing JitPack')
+            }
+            maven {
+                url = uri('https://jitpack.io')
+                content { includeGroup("${jitpackGroup}.zealot-android") }
+            }
+        } else {
+            throw new GradleException('zealotRepository must be local or jitpack')
+        }
         google()
         mavenCentral()
     }

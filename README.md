@@ -244,6 +244,15 @@ and `VERSION` for both commands. For example, use
 `GROUP=com.github.YourName VERSION=v0.3.0`; the consumer will then resolve
 `com.github.YourName.zealot-android:zealot:v0.3.0` from Maven Local.
 
+After JitPack builds the tag, verify its remote artifact with the same consumer:
+
+~~~shell
+GROUP=com.github.YourName VERSION=v0.3.0 \
+./gradlew -p publication-smoke -PzealotRepository=jitpack assembleDebug assembleRelease
+~~~
+
+This mode excludes Maven Local and resolves the SDK group only from JitPack.
+
 The debug consumer also runs on Android API 21. To exercise it on an emulator,
 start `python3 publication-smoke/mock_server.py` in another terminal, then run:
 
