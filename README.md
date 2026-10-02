@@ -194,7 +194,8 @@ Run the library tests and lint checks:
 ~~~
 
 To verify the published AAR as an independent Java consumer, publish locally and build
-the small `publication-smoke` project. Its release build runs R8:
+the small `publication-smoke` project. Its release build runs R8. Both builds read
+the SDK version from `version.properties`:
 
 ~~~shell
 ./gradlew :zealot:publishToMavenLocal

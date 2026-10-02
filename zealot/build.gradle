@@ -3,7 +3,9 @@ plugins {
     id 'maven-publish'
 }
 
-def sdkVersion = '0.3.0'
+def versionProperties = new Properties()
+rootProject.file('version.properties').withInputStream { versionProperties.load(it) }
+def sdkVersion = versionProperties.getProperty('sdkVersion')
 def jitpackGroup = System.getenv('GROUP')
 
 group = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
