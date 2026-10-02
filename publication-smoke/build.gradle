@@ -1,0 +1,25 @@
+plugins {
+    id 'com.android.application' version '9.4.0'
+}
+
+android {
+    namespace = 'im.ews.zealot.publicationsmoke'
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = 'im.ews.zealot.publicationsmoke'
+        minSdk = 21
+        targetSdk = 37
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+}
+
+dependencies {
+    implementation "im.ews.zealot:zealot:${findProperty('zealotVersion') ?: '0.3.0'}"
+}

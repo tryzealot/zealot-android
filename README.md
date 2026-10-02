@@ -193,6 +193,14 @@ Run the library tests and lint checks:
 ./gradlew :zealot:testDebugUnitTest :zealot:lint :app:lint
 ~~~
 
+To verify the published AAR as an independent Java consumer, publish locally and build
+the small `publication-smoke` project. Its release build runs R8:
+
+~~~shell
+./gradlew :zealot:publishToMavenLocal
+./gradlew -p publication-smoke assembleDebug assembleRelease
+~~~
+
 To verify the live Zealot contract against a channel with at least two Android releases
 of the same app, set the endpoint and channel key for one local test run:
 

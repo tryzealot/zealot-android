@@ -39,3 +39,6 @@ jobs:
 
       - name: Verify Maven publication
         run: ./gradlew :zealot:publishToMavenLocal
+
+      - name: Build independent Java consumer with R8
+        run: ./gradlew -p publication-smoke assembleDebug assembleRelease
