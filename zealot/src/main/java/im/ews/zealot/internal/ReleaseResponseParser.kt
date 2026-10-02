@@ -78,7 +78,12 @@ internal object ReleaseResponseParser {
 
     private fun matchesBundleId(release: JSONObject, expectedBundleId: String?): Boolean {
         if (expectedBundleId == null) return true
-        val bundleId = optionalText(release, "bundle_id")
-        return bundleId.isNullOrEmpty() || bundleId == "*" || bundleId == expectedBundleId
+        return when (val bundleId = release.opt("bundle_id")) {
+            null, JSONObject.NULL -> true
+            is String -> bundleId.trim().let {
+                it.isEmpty() || it == "*" || it == expectedBundleId
+            }
+            else -> false
+        }
     }
 }

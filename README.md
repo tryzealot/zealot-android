@@ -203,7 +203,8 @@ sent by this SDK, Zealot returns newer releases in newest-first order. Changelog
 entries from matching releases are combined in
 that order, with exact duplicate messages shown once. When a release includes a
 concrete bundle_id, the SDK checks it against the installed app before showing
-an update. Responses without this field remain supported. Responses larger than
+an update. Responses without this field or with `null` remain supported;
+malformed bundle IDs are rejected. Responses larger than
 1 MiB are rejected.
 
 ## Migrating from 0.2.0

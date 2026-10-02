@@ -132,6 +132,43 @@ class ReleaseResponseParserTest {
         assertTrue(result is UpdateResult.UpdateAvailable)
     }
 
+    @Test
+    fun nullBundleIdRemainsSupportedForOlderResponses() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"bundle_id":null,"release_version":"2.0",
+               "build_version":"12","install_url":"https://zealot.example.com/install"}]}""",
+            expectedBundleId = "com.example.app"
+        )
+
+        assertTrue(result is UpdateResult.UpdateAvailable)
+    }
+
+    @Test(expected = JSONException::class)
+    fun rejectsLatestReleaseWithMalformedBundleId() {
+        ReleaseResponseParser.parse(
+            """{"releases":[{"bundle_id":123,"release_version":"2.0",
+               "build_version":"12","install_url":"https://zealot.example.com/install"}]}""",
+            expectedBundleId = "com.example.app"
+        )
+    }
+
+    @Test
+    fun excludesOlderReleaseWithMalformedBundleIdFromChangelog() {
+        val result = ReleaseResponseParser.parse(
+            """{"releases":[{"bundle_id":"com.example.app","release_version":"3.0",
+               "build_version":"30","install_url":"https://zealot.example.com/install/30",
+               "changelog":[{"message":"Latest change"}]},
+               {"bundle_id":{"name":"com.other.app"},
+               "changelog":[{"message":"Untrusted change"}]}]}""",
+            expectedBundleId = "com.example.app"
+        )
+
+        assertEquals(
+            "01. Latest change",
+            (result as UpdateResult.UpdateAvailable).release.changelog
+        )
+    }
+
     @Test(expected = JSONException::class)
     fun rejectsNonHttpInstallUrl() {
         ReleaseResponseParser.parse(
