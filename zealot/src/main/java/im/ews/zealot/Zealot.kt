@@ -52,7 +52,8 @@ class Zealot private constructor(context: Context) {
         val maxHeight: ScreenHeight = ScreenHeight.AUTOMATIC,
         val httpClient: OkHttpClient? = null,
         val presenter: UpdatePresenter? = null,
-        val callbackExecutor: Executor? = null
+        val callbackExecutor: Executor? = null,
+        val dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
     )
 
     private val applicationContext = context.applicationContext ?: context
@@ -106,6 +107,12 @@ class Zealot private constructor(context: Context) {
     /** Replaces the built-in dialog; pass null to restore it. The presenter runs on the main thread. */
     fun setUpdatePresenter(presenter: UpdatePresenter?): Zealot {
         updateConfiguration { it.copy(presenter = presenter) }
+        return this
+    }
+
+    /** Configures the built-in dialog; pass null to restore localized defaults. */
+    fun setDialogOptions(options: UpdateDialogOptions?): Zealot {
+        updateConfiguration { it.copy(dialogOptions = options ?: UpdateDialogOptions()) }
         return this
     }
 
@@ -168,7 +175,8 @@ class Zealot private constructor(context: Context) {
                     showDialog = showDialog,
                     callbackExecutor = settings.callbackExecutor,
                     presenter = settings.presenter,
-                    maxHeight = settings.maxHeight
+                    maxHeight = settings.maxHeight,
+                    dialogOptions = settings.dialogOptions
                 )
             })
         }
@@ -223,7 +231,8 @@ class Zealot private constructor(context: Context) {
         showDialog: Boolean,
         callbackExecutor: Executor?,
         presenter: UpdatePresenter?,
-        maxHeight: ScreenHeight?
+        maxHeight: ScreenHeight?,
+        dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
     ) {
         if (showDialog && result is UpdateResult.UpdateAvailable) {
             mainHandler.post {
@@ -238,7 +247,8 @@ class Zealot private constructor(context: Context) {
                         "${release.releaseVersion} (${release.buildVersion})",
                         release.changelog,
                         release.installUrl,
-                        maxHeight ?: configuration.maxHeight
+                        maxHeight ?: configuration.maxHeight,
+                        dialogOptions
                     )
                 }
             }
@@ -276,11 +286,13 @@ class Zealot private constructor(context: Context) {
 
     /** Shows the built-in dialog. Calls from a background thread are posted to the main thread. */
     fun showAlert(version: String, changelog: String, installUrl: String) {
-        val maxHeight = configuration.maxHeight
+        val settings = configuration
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showAlertOnMain(version, changelog, installUrl, maxHeight)
+            showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
         } else {
-            mainHandler.post { showAlertOnMain(version, changelog, installUrl, maxHeight) }
+            mainHandler.post {
+                showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
+            }
         }
     }
 
@@ -288,10 +300,11 @@ class Zealot private constructor(context: Context) {
         version: String,
         changelog: String,
         installUrl: String,
-        maxHeight: ScreenHeight
+        maxHeight: ScreenHeight,
+        dialogOptions: UpdateDialogOptions
     ) {
         val activity = activityReference?.get() ?: return
-        DefaultUpdateDialog.show(activity, version, changelog, installUrl, maxHeight)
+        DefaultUpdateDialog.show(activity, version, changelog, installUrl, maxHeight, dialogOptions)
     }
 
     private inline fun updateConfiguration(change: (Configuration) -> Configuration) {

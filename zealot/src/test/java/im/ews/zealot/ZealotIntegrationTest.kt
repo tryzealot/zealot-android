@@ -419,6 +419,77 @@ class ZealotIntegrationTest {
     }
 
     @Test
+    @Suppress("DEPRECATION")
+    fun builtInDialogOptionsCanBeCustomizedAndReset() {
+        val activity = activity()
+        val zealot = Zealot.create(activity).setDialogOptions(
+            UpdateDialogOptions(
+                title = "App update",
+                updateButtonText = "Install",
+                laterButtonText = "Not now",
+                cancelable = false
+            )
+        )
+
+        zealot.showAlert("2.0", "Changes", "https://zealot.example.com/install")
+        val customized = ShadowDialog.getLatestDialog() as AlertDialog
+        assertEquals("App update", Shadows.shadowOf(customized).title)
+        assertEquals("Install", customized.getButton(AlertDialog.BUTTON_POSITIVE).text)
+        assertEquals("Not now", customized.getButton(AlertDialog.BUTTON_NEGATIVE).text)
+        customized.onBackPressed()
+        assertTrue(customized.isShowing)
+
+        customized.dismiss()
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        zealot.setDialogOptions(null)
+            .showAlert("3.0", "More changes", "https://zealot.example.com/install")
+        val restored = ShadowDialog.getLatestDialog() as AlertDialog
+        assertEquals(activity.getString(R.string.zealot_update_title, "3.0"),
+            Shadows.shadowOf(restored).title)
+        assertEquals(activity.getString(R.string.zealot_update_now),
+            restored.getButton(AlertDialog.BUTTON_POSITIVE).text)
+        assertEquals(activity.getString(R.string.zealot_update_later),
+            restored.getButton(AlertDialog.BUTTON_NEGATIVE).text)
+    }
+
+    @Test
+    fun builtInDialogOptionsRejectBlankLabels() {
+        assertThrows(IllegalArgumentException::class.java) {
+            UpdateDialogOptions(updateButtonText = " ")
+        }
+    }
+
+    @Test
+    fun inFlightDialogKeepsItsOptionsSnapshot() {
+        val activity = activity()
+        val requestStarted = CountDownLatch(1)
+        val unblockRequest = CountDownLatch(1)
+        val callbackFinished = CountDownLatch(1)
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requestStarted.countDown()
+            assertTrue(unblockRequest.await(5, TimeUnit.SECONDS))
+            response(chain.request(), 200, """{"releases":[{"release_version":"2.0",
+                "build_version":"12","install_url":"https://zealot.example.com/install"}]}""")
+        }.build()
+        val zealot = Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel")
+            .setHttpClient(client)
+            .setCallbackExecutor(Executor { it.run() })
+            .setDialogOptions(UpdateDialogOptions(updateButtonText = "First label"))
+
+        zealot.checkAndShowUpdate(UpdateResultCallback { callbackFinished.countDown() })
+        assertTrue(requestStarted.await(5, TimeUnit.SECONDS))
+        zealot.setDialogOptions(UpdateDialogOptions(updateButtonText = "Later label"))
+        unblockRequest.countDown()
+        assertTrue(callbackFinished.await(5, TimeUnit.SECONDS))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+
+        val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        assertEquals("First label", dialog.getButton(AlertDialog.BUTTON_POSITIVE).text)
+    }
+
+    @Test
     fun destroyingActivityDismissesUpdateDialog() {
         val activity = activity()
         Zealot.create(activity).showAlert(

@@ -16,6 +16,7 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
     private var callbackExecutor: Executor? = null
     private var presenter: UpdatePresenter? = null
     private var maxHeight: Zealot.ScreenHeight? = null
+    private var dialogOptions = UpdateDialogOptions()
 
     @JvmSynthetic
     internal fun configure(
@@ -23,13 +24,15 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         showDialog: Boolean,
         callbackExecutor: Executor?,
         presenter: UpdatePresenter?,
-        maxHeight: Zealot.ScreenHeight
+        maxHeight: Zealot.ScreenHeight,
+        dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
     ) {
         this.updateCallback = updateCallback
         this.showDialog = showDialog
         this.callbackExecutor = callbackExecutor
         this.presenter = presenter
         this.maxHeight = maxHeight
+        this.dialogOptions = dialogOptions
     }
 
     override fun onResponse(call: Call, response: Response) {
@@ -38,7 +41,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
             expectedBundleId = call.request().url.queryParameter("bundle_id")
         )
         zealot.dispatchResult(
-            call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight
+            call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight,
+            dialogOptions
         )
     }
 
@@ -51,7 +55,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
             showDialog,
             callbackExecutor,
             presenter,
-            maxHeight
+            maxHeight,
+            dialogOptions
         )
     }
 }

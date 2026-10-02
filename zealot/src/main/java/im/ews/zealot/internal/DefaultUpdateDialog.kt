@@ -8,6 +8,7 @@ import android.net.Uri
 import android.view.View
 import android.view.WindowManager
 import im.ews.zealot.R
+import im.ews.zealot.UpdateDialogOptions
 import im.ews.zealot.Zealot
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
@@ -18,7 +19,8 @@ internal object DefaultUpdateDialog {
         version: String,
         changelog: String,
         installUrl: String,
-        maxHeight: Zealot.ScreenHeight
+        maxHeight: Zealot.ScreenHeight,
+        options: UpdateDialogOptions
     ): AlertDialog? {
         if (activity.isFinishing || activity.isDestroyed) return null
         if (installUrl.toHttpUrlOrNull() == null) return null
@@ -28,17 +30,20 @@ internal object DefaultUpdateDialog {
         }
 
         val dialog = AlertDialog.Builder(activity)
-            .setTitle(activity.getString(R.string.zealot_update_title, version))
+            .setTitle(options.title ?: activity.getString(R.string.zealot_update_title, version))
             .setMessage(changelog)
-            .setNegativeButton(R.string.zealot_update_later, null)
-            .setPositiveButton(R.string.zealot_update_now) { _, _ ->
+            .setNegativeButton(options.laterButtonText ?: activity.getString(R.string.zealot_update_later), null)
+            .setPositiveButton(options.updateButtonText ?: activity.getString(R.string.zealot_update_now)) { _, _ ->
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(installUrl))
                 try {
                     activity.startActivity(intent)
                 } catch (_: ActivityNotFoundException) {
                     // No browser or installer can handle the release link.
+                } catch (_: SecurityException) {
+                    // The system or device policy can deny opening the release link.
                 }
             }
+            .setCancelable(options.cancelable)
             .create()
         val detachListener = object : View.OnAttachStateChangeListener {
             override fun onViewAttachedToWindow(view: View) = Unit

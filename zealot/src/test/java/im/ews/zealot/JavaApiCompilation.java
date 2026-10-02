@@ -14,6 +14,7 @@ final class JavaApiCompilation {
             .setChannelKey("channel", Zealot.BUILD_TYPE)
             .setBuildType(Zealot.BUILD_TYPE)
             .setAlertMaxHeight(Zealot.ScreenHeight.HALFSCREEN)
+            .setDialogOptions(new UpdateDialogOptions("Update available", "Install", "Later", true))
             .setHttpClient(client)
             .setCallbackExecutor(executor)
             .setUpdatePresenter((screen, release) -> {

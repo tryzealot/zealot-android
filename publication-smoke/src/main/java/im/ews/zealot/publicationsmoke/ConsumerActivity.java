@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.widget.TextView;
 import im.ews.zealot.ReleaseInfo;
 import im.ews.zealot.UpdateCallback;
+import im.ews.zealot.UpdateDialogOptions;
 import im.ews.zealot.UpdateError;
 import im.ews.zealot.UpdateResult;
 import im.ews.zealot.Zealot;
@@ -31,6 +32,7 @@ public final class ConsumerActivity extends Activity {
         Zealot zealot = Zealot.create(this)
             .setEndpoint(endpoint == null ? "https://zealot.example.com" : endpoint)
             .setChannelKey(channelKey == null ? "channel" : channelKey)
+            .setDialogOptions(new UpdateDialogOptions(null, "Install", "Later", true))
             .setBuildType(Zealot.BUILD_TYPE);
 
         // Keep both the original Java callback and the typed overload in the release APK.
