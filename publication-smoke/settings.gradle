@@ -19,7 +19,7 @@ dependencyResolutionManagement {
             }
             maven {
                 url = uri('https://jitpack.io')
-                content { includeGroup("${jitpackGroup}.zealot-android") }
+                content { includeGroup(jitpackGroup) }
             }
         } else {
             throw new GradleException('zealotRepository must be local or jitpack')

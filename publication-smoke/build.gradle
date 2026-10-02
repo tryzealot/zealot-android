@@ -6,7 +6,8 @@ def versionProperties = new Properties()
 file('../version.properties').withInputStream { versionProperties.load(it) }
 def sdkVersion = System.getenv('VERSION') ?: versionProperties.getProperty('sdkVersion')
 def jitpackGroup = System.getenv('GROUP')
-def sdkGroup = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
+def sdkGroup = jitpackGroup ?: 'im.ews.zealot'
+def sdkArtifact = jitpackGroup ? (System.getenv('ARTIFACT') ?: 'zealot-android') : 'zealot'
 
 android {
     namespace = 'im.ews.zealot.publicationsmoke'
@@ -27,5 +28,5 @@ android {
 }
 
 dependencies {
-    implementation "${sdkGroup}:zealot:${sdkVersion}"
+    implementation "${sdkGroup}:${sdkArtifact}:${sdkVersion}"
 }

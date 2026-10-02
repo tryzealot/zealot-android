@@ -30,7 +30,7 @@ Then add the SDK dependency. Replace YOUR_GITHUB_LOGIN with the owner of the for
 
 ~~~groovy
 dependencies {
-    implementation 'com.github.<YOUR_GITHUB_LOGIN>.zealot-android:zealot:v0.3.0'
+    implementation 'com.github.<YOUR_GITHUB_LOGIN>:zealot-android:v0.3.0'
 }
 ~~~
 
@@ -242,7 +242,7 @@ the SDK version from `version.properties`:
 You can also simulate JitPack's tag and fork coordinates locally by setting `GROUP`
 and `VERSION` for both commands. For example, use
 `GROUP=com.github.YourName VERSION=v0.3.0`; the consumer will then resolve
-`com.github.YourName.zealot-android:zealot:v0.3.0` from Maven Local.
+`com.github.YourName:zealot-android:v0.3.0` from Maven Local.
 
 After JitPack builds the tag, verify its remote artifact with the same consumer:
 

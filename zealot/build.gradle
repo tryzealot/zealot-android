@@ -12,7 +12,7 @@ def repositoryOwner = jitpackGroup?.startsWith('com.github.')
     : 'tryzealot'
 def repositoryUrl = "https://github.com/${repositoryOwner}/zealot-android"
 
-group = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
+group = jitpackGroup ?: 'im.ews.zealot'
 version = System.getenv('VERSION') ?: sdkVersion
 
 android {
@@ -79,7 +79,7 @@ publishing {
     publications {
         release(MavenPublication) {
             groupId = project.group
-            artifactId = 'zealot'
+            artifactId = jitpackGroup ? (System.getenv('ARTIFACT') ?: 'zealot-android') : 'zealot'
             version = project.version
             pom {
                 name = 'Zealot Android SDK'
