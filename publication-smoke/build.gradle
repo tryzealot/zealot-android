@@ -5,6 +5,8 @@ plugins {
 def versionProperties = new Properties()
 file('../version.properties').withInputStream { versionProperties.load(it) }
 def sdkVersion = System.getenv('VERSION') ?: versionProperties.getProperty('sdkVersion')
+def jitpackGroup = System.getenv('GROUP')
+def sdkGroup = jitpackGroup ? "${jitpackGroup}.zealot-android" : 'im.ews.zealot'
 
 android {
     namespace = 'im.ews.zealot.publicationsmoke'
@@ -25,5 +27,5 @@ android {
 }
 
 dependencies {
-    implementation "im.ews.zealot:zealot:${sdkVersion}"
+    implementation "${sdkGroup}:zealot:${sdkVersion}"
 }

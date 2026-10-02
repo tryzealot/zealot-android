@@ -202,6 +202,11 @@ the SDK version from `version.properties`:
 ./gradlew -p publication-smoke assembleDebug assembleRelease
 ~~~
 
+You can also simulate JitPack's tag and fork coordinates locally by setting `GROUP`
+and `VERSION` for both commands. For example, use
+`GROUP=com.github.YourName VERSION=v0.3.0`; the consumer will then resolve
+`com.github.YourName.zealot-android:zealot:v0.3.0` from Maven Local.
+
 To verify the live Zealot contract against a channel with at least two Android releases
 of the same app, set the endpoint and channel key for one local test run:
 
