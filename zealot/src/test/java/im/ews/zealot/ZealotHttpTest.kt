@@ -3,6 +3,7 @@ package im.ews.zealot
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import okhttp3.OkHttpClient
+import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -21,6 +22,32 @@ import java.util.concurrent.atomic.AtomicReference
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ZealotHttpTest {
+    @Test
+    fun sanitizedLiveInvalidChannelResponseIsHttpError() {
+        val fixture = requireNotNull(
+            javaClass.getResourceAsStream("/fixtures/latest-invalid-channel.json")
+        ).bufferedReader(Charsets.UTF_8).use { JSONObject(it.readText()) }
+        MockWebServer().use { server ->
+            server.enqueue(MockResponse.Builder()
+                .code(fixture.getInt("status"))
+                .body(fixture.getJSONObject("body").toString())
+                .build())
+            server.start()
+
+            val results = LinkedBlockingQueue<UpdateResult>()
+            Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setCallbackExecutor(Executor { it.run() })
+                .checkForUpdate { result -> results.offer(result) }
+
+            val result = results.poll(5, TimeUnit.SECONDS) as UpdateResult.Error
+            assertEquals(UpdateErrorCode.HTTP, result.error.code)
+            assertEquals(422, result.error.httpStatusCode)
+            assertFalse(result.error.message.contains(fixture.getJSONObject("body").getString("error")))
+        }
+    }
+
     @Test
     fun repeatedChecksReleaseAndReuseConnectionAfterInvalidJsonAndHttpError() {
         MockWebServer().use { server ->

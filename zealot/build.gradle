@@ -66,6 +66,13 @@ dependencies {
 tasks.withType(Test).configureEach {
     // Robolectric reflects into FileDescriptor on recent Android SDKs.
     jvmArgs '--add-exports=java.base/jdk.internal.access=ALL-UNNAMED'
+
+    def liveApiConfigured = System.getenv('ZEALOT_TEST_ENDPOINT')?.isBlank() == false &&
+        System.getenv('ZEALOT_TEST_CHANNEL_KEY')?.isBlank() == false
+    // Track only presence: channel keys must not become cache inputs or build-scan values.
+    inputs.property('liveApiConfigured', liveApiConfigured)
+    outputs.upToDateWhen { !liveApiConfigured }
+    outputs.doNotCacheIf('The live API depends on mutable external server data') { liveApiConfigured }
 }
 
 publishing {

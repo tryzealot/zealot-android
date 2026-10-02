@@ -273,6 +273,10 @@ an earlier release of the same app, then checks that the older version sees an u
 the newest version does not, and an invalid channel key fails. It also calls the public
 `Zealot.checkForUpdate` API with a simulated installed app at the older version.
 The channel key is not written to source files or test reports.
+When both variables are supplied, the test task runs again on each invocation rather
+than reusing an earlier result. Credentials are not registered as Gradle cache inputs.
+Sanitized responses in `zealot/src/test/resources/fixtures` also exercise the
+available, current, and invalid-channel contract without network access.
 
 The example app sends its own application ID as `bundle_id`. To exercise an existing
 channel in the example app, that channel must contain releases for the example app's

@@ -13,6 +13,35 @@ import org.robolectric.annotation.Config
 @Config(sdk = [34])
 class ReleaseResponseParserTest {
     @Test
+    fun sanitizedLiveResponsePreservesReleaseAndStructuredChangelog() {
+        val result = ReleaseResponseParser.parse(
+            fixture("latest-available.json"), expectedBundleId = "com.example.demo"
+        )
+
+        assertEquals(
+            UpdateResult.UpdateAvailable(ReleaseInfo(
+                releaseVersion = "2.0",
+                buildVersion = "12",
+                installUrl = "https://zealot.example.com/install/12",
+                changelog = "01. Change 1\n02. Change 2\n03. Change 3"
+            )),
+            result
+        )
+    }
+
+    @Test
+    fun sanitizedLiveCurrentResponseIsUpToDate() {
+        assertEquals(
+            UpdateResult.UpToDate,
+            ReleaseResponseParser.parse(fixture("latest-current.json"), "com.example.demo")
+        )
+    }
+
+    private fun fixture(name: String): String =
+        requireNotNull(javaClass.getResourceAsStream("/fixtures/$name"))
+            .bufferedReader(Charsets.UTF_8).use { it.readText() }
+
+    @Test
     fun emptyReleasesMeansUpToDate() {
         assertEquals(UpdateResult.UpToDate, ReleaseResponseParser.parse("""{"releases":[]}"""))
     }

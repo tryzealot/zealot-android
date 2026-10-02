@@ -1,0 +1,6 @@
+{
+  "status": 422,
+  "body": {
+    "error": "Invalid channel key"
+  }
+}

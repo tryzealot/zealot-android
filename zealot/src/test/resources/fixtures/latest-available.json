@@ -1,0 +1,22 @@
+{
+  "releases": [
+    {
+      "bundle_id": "com.example.demo",
+      "release_version": "2.0",
+      "build_version": "12",
+      "install_url": "https://zealot.example.com/install/12",
+      "changelog": [
+        {
+          "message": "Change 1"
+        },
+        {
+          "message": "Change 2"
+        },
+        {
+          "message": "Change 3"
+        }
+      ],
+      "text_changelog": "Release notes"
+    }
+  ]
+}
