@@ -2,6 +2,7 @@ package im.ews.zealot
 
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
+import okhttp3.OkHttpClient
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -20,6 +21,60 @@ import java.util.concurrent.atomic.AtomicReference
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ZealotHttpTest {
+    @Test
+    fun callTimeoutIsReportedAsNetworkError() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse.Builder()
+                    .code(200)
+                    .body("""{"releases":[]}""")
+                    .bodyDelay(1, TimeUnit.SECONDS)
+                    .build()
+            )
+            server.start()
+
+            val results = LinkedBlockingQueue<UpdateResult>()
+            val client = OkHttpClient.Builder()
+                .callTimeout(150, TimeUnit.MILLISECONDS)
+                .build()
+            Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setHttpClient(client)
+                .setCallbackExecutor(Executor { it.run() })
+                .checkForUpdate { result -> results.offer(result) }
+
+            val result = results.poll(5, TimeUnit.SECONDS) as UpdateResult.Error
+            assertEquals(UpdateErrorCode.NETWORK, result.error.code)
+        }
+    }
+
+    @Test
+    fun explicitCancellationDuringResponseReadSuppressesResult() {
+        MockWebServer().use { server ->
+            server.enqueue(
+                MockResponse.Builder()
+                    .code(200)
+                    .body("""{"releases":[]}""")
+                    .bodyDelay(1, TimeUnit.SECONDS)
+                    .build()
+            )
+            server.start()
+
+            val results = LinkedBlockingQueue<UpdateResult>()
+            val call = Zealot.create(RuntimeEnvironment.getApplication())
+                .setEndpoint(server.url("/").toString())
+                .setChannelKey("channel")
+                .setCallbackExecutor(Executor { it.run() })
+                .checkForUpdate { result -> results.offer(result) }
+
+            assertTrue(server.takeRequest(5, TimeUnit.SECONDS) != null)
+            call.cancel()
+            assertTrue(call.isCanceled())
+            assertNull(results.poll(2, TimeUnit.SECONDS))
+        }
+    }
+
     @Test
     fun typedCallbackReportsAvailableCurrentAndHttpError() {
         MockWebServer().use { server ->

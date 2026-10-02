@@ -10,6 +10,7 @@ import android.os.Looper
 import im.ews.zealot.internal.DefaultUpdateDialog
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.UpdateRequestFactory
+import im.ews.zealot.internal.UserCancellableCall
 import okhttp3.Call
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -171,18 +172,20 @@ class Zealot private constructor(context: Context) {
     private fun startCheck(callback: UpdateCallback?, showDialog: Boolean): Call {
         val settings = configuration
         val request = createRequest(settings)
-        return (settings.httpClient ?: defaultClient).newCall(request).also { call ->
-            call.enqueue(Callback(this).apply {
-                configure(
-                    callback,
-                    showDialog = showDialog,
-                    callbackExecutor = settings.callbackExecutor,
-                    presenter = settings.presenter,
-                    maxHeight = settings.maxHeight,
-                    dialogOptions = settings.dialogOptions
-                )
-            })
-        }
+        val delegate = (settings.httpClient ?: defaultClient).newCall(request)
+        val call = UserCancellableCall(delegate)
+        delegate.enqueue(Callback(this).apply {
+            configure(
+                callback,
+                showDialog = showDialog,
+                callbackExecutor = settings.callbackExecutor,
+                presenter = settings.presenter,
+                maxHeight = settings.maxHeight,
+                dialogOptions = settings.dialogOptions,
+                cancelledByUser = call.cancelledByUser
+            )
+        })
+        return call
     }
 
     @JvmSynthetic
@@ -235,11 +238,13 @@ class Zealot private constructor(context: Context) {
         callbackExecutor: Executor?,
         presenter: UpdatePresenter?,
         maxHeight: ScreenHeight?,
-        dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
+        dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
+        cancelledByUser: AtomicBoolean? = null
     ) {
+        fun isUserCancelled(): Boolean = cancelledByUser?.get() ?: call.isCanceled()
         if (showDialog && result is UpdateResult.UpdateAvailable) {
             mainHandler.post {
-                if (call.isCanceled()) return@post
+                if (isUserCancelled()) return@post
                 val activity = activityReference?.get() ?: return@post
                 if (activity.isFinishing || activity.isDestroyed) return@post
                 val release = result.release
@@ -262,7 +267,7 @@ class Zealot private constructor(context: Context) {
             val callbackRejection = AtomicReference<RejectedExecutionException?>()
             val delivery = Runnable {
                 if (!invoked.compareAndSet(false, true)) return@Runnable
-                if (call.isCanceled()) return@Runnable
+                if (isUserCancelled()) return@Runnable
                 try {
                     when (result) {
                         UpdateResult.UpToDate -> callback.onUpToDate()

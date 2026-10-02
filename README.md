@@ -87,7 +87,9 @@ val call = Zealot.create(this)
 ~~~
 
 The request uses a shared OkHttp client and has a 30-second call timeout. A timeout is
-reported as a network error through either callback style.
+reported as a network error through either callback style, even though OkHttp marks
+its internal call as cancelled. Calling `cancel()` on the returned `Call` suppresses
+the result instead.
 
 You can supply an existing OkHttp client to use your app's interceptors, TLS configuration, and timeouts. A callback executor can move result handling off the main thread. Configure these before starting a check; each check uses a snapshot of its settings.
 

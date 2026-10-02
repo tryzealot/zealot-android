@@ -5,6 +5,7 @@ import okhttp3.Call
 import okhttp3.Response
 import java.io.IOException
 import java.util.concurrent.Executor
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Kept public for source and binary compatibility with the original SDK.
@@ -17,6 +18,7 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
     private var presenter: UpdatePresenter? = null
     private var maxHeight: Zealot.ScreenHeight? = null
     private var dialogOptions = UpdateDialogOptions()
+    private var cancelledByUser: AtomicBoolean? = null
 
     @JvmSynthetic
     internal fun configure(
@@ -25,7 +27,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         callbackExecutor: Executor?,
         presenter: UpdatePresenter?,
         maxHeight: Zealot.ScreenHeight,
-        dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
+        dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
+        cancelledByUser: AtomicBoolean? = null
     ) {
         this.updateCallback = updateCallback
         this.showDialog = showDialog
@@ -33,21 +36,27 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         this.presenter = presenter
         this.maxHeight = maxHeight
         this.dialogOptions = dialogOptions
+        this.cancelledByUser = cancelledByUser
     }
 
     override fun onResponse(call: Call, response: Response) {
+        if (isUserCancelled(call)) {
+            response.close()
+            return
+        }
         val result = UpdateResponseReader.read(
             response,
             expectedBundleId = call.request().url.queryParameter("bundle_id")
         )
         zealot.dispatchResult(
             call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight,
-            dialogOptions
+            dialogOptions,
+            cancelledByUser
         )
     }
 
     override fun onFailure(call: Call, e: IOException) {
-        if (call.isCanceled()) return
+        if (isUserCancelled(call)) return
         zealot.dispatchResult(
             call,
             UpdateResponseReader.connectionFailure(),
@@ -56,7 +65,10 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
             callbackExecutor,
             presenter,
             maxHeight,
-            dialogOptions
+            dialogOptions,
+            cancelledByUser
         )
     }
+
+    private fun isUserCancelled(call: Call): Boolean = cancelledByUser?.get() ?: call.isCanceled()
 }
