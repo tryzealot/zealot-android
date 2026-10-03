@@ -5,6 +5,7 @@ Android SDK for checking newer releases on a Zealot channel and opening the rele
 ## Requirements
 
 - Android API 21 or newer for the SDK.
+- `compileSdk` 37 or newer in the consuming application (required by the published AAR metadata).
 - HTTPS endpoint for the Zealot server.
 - A channel key for the Android application.
 - The INTERNET permission (declared by the consuming application).
@@ -209,6 +210,16 @@ malformed bundle IDs are rejected. Responses larger than 1 MiB are rejected.
 ## Migrating from 0.2.0
 
 The original `create`, `setEndpoint`, `setChannelKey`, `setBuildType`, `setAlertMaxHeight`, `launch`, `showAlert`, and `Callback` entry points remain available. The SDK now requires Android API 21 or newer; applications supporting API 14–20 cannot use this release. The built-in dialog uses the platform `AlertDialog`, with English strings by default and the original Chinese strings for Chinese locales. Endpoint and channel-key setters reject invalid input immediately. To handle update and error states explicitly, use `checkForUpdate(callback)`; for a cancellable check that also shows update UI, use `checkAndShowUpdate(callback)`.
+
+The Kotlin/Java package remains `im.ews.zealot`, so existing imports do not change.
+After an upstream release, consumers of `com.github.tryzealot:zealot-android`
+can keep that group and artifact and select the new upstream tag. Using a fork
+before upstream acceptance changes the dependency owner to that fork's account;
+merging the upstream PR does not redirect existing fork dependencies.
+
+This release also requires `compileSdk` 37 or newer and upgrades the transitive
+OkHttp dependency to 5.5.0. Applications with an older Android build configuration
+or their own OkHttp integration should verify those requirements before upgrading.
 
 ## Development
 
