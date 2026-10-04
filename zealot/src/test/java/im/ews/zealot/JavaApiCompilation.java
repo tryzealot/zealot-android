@@ -1,0 +1,48 @@
+package im.ews.zealot;
+
+import android.app.Activity;
+import okhttp3.Call;
+import okhttp3.OkHttpClient;
+
+import java.util.concurrent.Executor;
+
+/** Compiled with the unit tests to guard the public Java integration surface. */
+final class JavaApiCompilation {
+    static Call configureAndCheck(Activity activity, OkHttpClient client, Executor executor) {
+        Zealot zealot = Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel", Zealot.BUILD_TYPE)
+            .setBuildType(Zealot.BUILD_TYPE)
+            .setAlertMaxHeight(Zealot.ScreenHeight.HALFSCREEN)
+            .setDialogOptions(new UpdateDialogOptions("Update available", "Install", "Later", true))
+            .setHttpClient(client)
+            .setCallbackExecutor(executor)
+            .setUpdatePresenter((screen, release) -> {
+                // An application can present release details in its own UI.
+            });
+        return zealot.checkForUpdate(new UpdateCallback() {
+            @Override public void onUpdateAvailable(ReleaseInfo release) {}
+            @Override public void onUpToDate() {}
+            @Override public void onError(UpdateError error) {}
+        });
+    }
+
+    static Call checkWithTypedResult(Activity activity) {
+        return Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel")
+            .checkForUpdate(result -> {
+                if (result instanceof UpdateResult.UpdateAvailable) {
+                    ReleaseInfo release = ((UpdateResult.UpdateAvailable) result).getRelease();
+                    release.getInstallUrl();
+                }
+            });
+    }
+
+    static Call checkAndShowWithoutCallback(Activity activity) {
+        return Zealot.create(activity)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("channel")
+            .checkAndShowUpdate();
+    }
+}

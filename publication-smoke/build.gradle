@@ -1,0 +1,32 @@
+plugins {
+    id 'com.android.application' version '9.4.0'
+}
+
+def versionProperties = new Properties()
+file('../version.properties').withInputStream { versionProperties.load(it) }
+def sdkVersion = System.getenv('VERSION') ?: versionProperties.getProperty('sdkVersion')
+def jitpackGroup = System.getenv('GROUP')
+def sdkGroup = jitpackGroup ?: 'im.ews.zealot'
+def sdkArtifact = jitpackGroup ? (System.getenv('ARTIFACT') ?: 'zealot-android') : 'zealot'
+
+android {
+    namespace = 'im.ews.zealot.publicationsmoke'
+    compileSdk = 37
+
+    defaultConfig {
+        applicationId = 'im.ews.zealot.publicationsmoke'
+        minSdk = 21
+        targetSdk = 37
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt')
+        }
+    }
+}
+
+dependencies {
+    implementation "${sdkGroup}:${sdkArtifact}:${sdkVersion}"
+}

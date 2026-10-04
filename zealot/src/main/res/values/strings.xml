@@ -1,3 +1,6 @@
 <resources>
-  <string name="app_name">Zealot</string>
+  <string name="app_name" translatable="false">Zealot</string>
+  <string name="zealot_update_title">New version %1$s</string>
+  <string name="zealot_update_later">Later</string>
+  <string name="zealot_update_now">Update now</string>
 </resources>
