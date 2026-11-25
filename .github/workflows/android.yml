@@ -10,35 +10,53 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@v7.0.1
+
+      - name: Validate release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: python3 .github/scripts/verify-release.py "$GITHUB_REF_NAME"
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v6
+        uses: actions/setup-java@v6.3.0
         with:
           distribution: temurin
           java-version: '17'
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v6.4.1
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
+        uses: android-actions/setup-android@v4.0.4
         with:
           packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
 
       - name: Assemble library and sample
-        run: ./gradlew :zealot:assembleDebug :app:assembleDebug :zealot:assembleRelease :app:assembleRelease
+        run: bash .github/scripts/run-gradle.sh :zealot:assembleDebug :app:assembleDebug :zealot:assembleRelease :app:assembleRelease
 
       - name: Run Android lint
-        run: ./gradlew :zealot:lint :app:lint
+        run: bash .github/scripts/run-gradle.sh :zealot:lint :app:lint
 
       - name: Run library unit tests
-        run: ./gradlew :zealot:testDebugUnitTest
+        run: bash .github/scripts/run-gradle.sh :zealot:testDebugUnitTest
 
       - name: Verify Maven publication
-        run: ./gradlew :zealot:publishToMavenLocal
+        run: bash .github/scripts/run-gradle.sh :zealot:publishToMavenLocal
 
       - name: Build independent Java consumer with R8
-        run: ./gradlew -p publication-smoke assembleDebug assembleRelease
+        run: bash .github/scripts/run-gradle.sh -p publication-smoke assembleDebug assembleRelease
+
+      - name: Verify JitPack built this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          python3 .github/scripts/verify-release.py "$GITHUB_REF_NAME" \
+            --jitpack-owner "$GITHUB_REPOSITORY_OWNER" --commit "$(git rev-parse HEAD)"
+
+      - name: Build independent consumer from JitPack
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          GROUP="com.github.$GITHUB_REPOSITORY_OWNER" VERSION="$GITHUB_REF_NAME" \
+            bash .github/scripts/run-gradle.sh -p publication-smoke \
+              -PzealotRepository=jitpack assembleDebug assembleRelease

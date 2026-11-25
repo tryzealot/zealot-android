@@ -56,11 +56,11 @@ android {
 }
 
 dependencies {
-    api 'com.squareup.okhttp3:okhttp:5.5.0'
+    api 'com.squareup.okhttp3:okhttp:5.5.1'
 
     testImplementation 'junit:junit:4.13.2'
-    testImplementation 'org.robolectric:robolectric:4.17'
-    testImplementation 'com.squareup.okhttp3:mockwebserver3:5.5.0'
+    testImplementation 'org.robolectric:robolectric:4.18.1'
+    testImplementation 'com.squareup.okhttp3:mockwebserver3:5.5.1'
 }
 
 tasks.withType(Test).configureEach {

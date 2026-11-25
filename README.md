@@ -14,8 +14,7 @@ The example application uses AppCompat 1.8, which requires Android API 23 or new
 
 ## Install
 
-The library is configured to publish the `zealot` module through JitPack. After
-building a tag in your fork, add JitPack to the repositories used by your project:
+Add JitPack to the repositories used by your project:
 
 ~~~groovy
 dependencyResolutionManagement {
@@ -27,15 +26,22 @@ dependencyResolutionManagement {
 }
 ~~~
 
-Then add the SDK dependency. Replace YOUR_GITHUB_LOGIN with the owner of the fork and use a tag that exists in that fork:
+Use the dependency version shown in [GitHub Releases](https://github.com/tryzealot/zealot-android/releases).
+Until the first tagged release, use the verified upstream commit:
 
 ~~~groovy
 dependencies {
-    implementation 'com.github.<YOUR_GITHUB_LOGIN>:zealot-android:v0.3.0'
+    implementation 'com.github.tryzealot:zealot-android:e8a168e75f552a133111ffc3bd320967e04c1972'
 }
 ~~~
 
-The fork owner and version above are examples. Confirm that JitPack has built the selected tag before using it. For the original project, use tryzealot as the owner after the release is available there.
+## Releases
+
+[GitHub Releases](https://github.com/tryzealot/zealot-android/releases) lists stable
+versions tagged `vX.Y.Z`. Each entry contains the Gradle dependency, changes,
+build requirements, and any upgrade steps.
+See the [changelog](CHANGELOG.md) for unreleased changes and the
+[release guide](RELEASING.md) for versioning and publishing.
 
 ## Permissions
 
@@ -218,7 +224,7 @@ before upstream acceptance changes the dependency owner to that fork's account;
 merging the upstream PR does not redirect existing fork dependencies.
 
 This release also requires `compileSdk` 37 or newer and upgrades the transitive
-OkHttp dependency to 5.5.0. Applications with an older Android build configuration
+OkHttp dependency to the 5.5 series. Applications with an older Android build configuration
 or their own OkHttp integration should verify those requirements before upgrading.
 
 ## Development
@@ -251,14 +257,13 @@ the SDK version from `version.properties`:
 ~~~
 
 You can also simulate JitPack's tag and fork coordinates locally by setting `GROUP`
-and `VERSION` for both commands. For example, use
-`GROUP=com.github.YourName VERSION=v0.3.0`; the consumer will then resolve
-`com.github.YourName:zealot-android:v0.3.0` from Maven Local.
+and `VERSION` for both commands. The consumer uses those coordinates from Maven Local.
 
-After JitPack builds the tag, verify its remote artifact with the same consumer:
+The same consumer can build against a pinned commit from JitPack. This is useful
+for testing a branch before it is ready to tag.
 
 ~~~shell
-GROUP=com.github.YourName VERSION=v0.3.0 \
+GROUP=com.github.tryzealot VERSION=e8a168e75f552a133111ffc3bd320967e04c1972 \
 ./gradlew -p publication-smoke -PzealotRepository=jitpack assembleDebug assembleRelease
 ~~~
 
