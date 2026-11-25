@@ -37,8 +37,7 @@ To verify a stable release, set `owner` to the releasing repository's owner,
 ```sh
 python3 .github/scripts/verify-release.py "$tag" --jitpack-owner "$owner" --commit "$commit"
 GROUP="com.github.$owner" VERSION="$tag" \
-  ./gradlew -p publication-smoke -PzealotRepository=jitpack \
-    --refresh-dependencies assembleDebug assembleRelease
+  ./gradlew -p publication-smoke -PzealotRepository=jitpack assembleDebug assembleRelease
 ```
 
 For tags made before the tag checks were introduced, run the consumer build with
