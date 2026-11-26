@@ -14,6 +14,15 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: ${{ github.event_name == 'pull_request' && '0' || '1' }}
+          persist-credentials: false
+
+      - name: Validate release changes in the pull request
+        if: github.event_name == 'pull_request' && github.base_ref == 'master'
+        env:
+          BEFORE: ${{ github.event.pull_request.base.sha }}
+        run: python3 .github/scripts/prepare-release.py "$BEFORE" "$RUNNER_TEMP/release-notes.md"
 
       - name: Validate release version
         if: startsWith(github.ref, 'refs/tags/v')
@@ -60,3 +69,97 @@ jobs:
           GROUP="com.github.$GITHUB_REPOSITORY_OWNER" VERSION="$GITHUB_REF_NAME" \
             bash .github/scripts/run-gradle.sh -p publication-smoke \
               -PzealotRepository=jitpack assembleDebug assembleRelease
+
+  release:
+    if: github.repository == 'tryzealot/zealot-android' && github.event_name == 'push' && github.ref == 'refs/heads/master' && !github.event.deleted
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: write
+    concurrency:
+      group: sdk-release-${{ github.sha }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out the commit tested by CI
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Prepare release notes and check the tag
+        id: prepare
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: python3 .github/scripts/prepare-release.py "$BEFORE" "$RUNNER_TEMP/release-notes.md"
+
+      - name: Check whether the release already exists
+        if: steps.prepare.outputs.tag != ''
+        id: publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          release=$(gh api --paginate "repos/$GITHUB_REPOSITORY/releases" \
+            --jq ".[] | select(.tag_name == \"$TAG\") | .draft")
+          case "$release" in
+            "") echo "pending=true" >> "$GITHUB_OUTPUT" ;;
+            false) echo "$TAG is already published." ;;
+            true) echo "A GitHub Release draft already exists for $TAG. Review it before publishing." >&2; exit 1 ;;
+            *) echo "Unexpected release state for $TAG." >&2; exit 1 ;;
+          esac
+
+      - name: Set up JDK 17
+        if: steps.publication.outputs.pending == 'true'
+        uses: actions/setup-java@v6.3.0
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        if: steps.publication.outputs.pending == 'true'
+        uses: gradle/actions/setup-gradle@v6.4.1
+
+      - name: Set up Android SDK
+        if: steps.publication.outputs.pending == 'true'
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: 'platform-tools platforms;android-37.0 build-tools;36.0.0'
+
+      - name: Create the stable tag
+        if: steps.publication.outputs.pending == 'true' && steps.prepare.outputs.create_tag == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          tag_sha=$(gh api --method POST "repos/$GITHUB_REPOSITORY/git/tags" \
+            -f tag="$TAG" -f message="Zealot Android SDK $TAG" \
+            -f object="$GITHUB_SHA" -f type=commit \
+            -f 'tagger[name]=github-actions[bot]' \
+            -f 'tagger[email]=41898282+github-actions[bot]@users.noreply.github.com' \
+            --jq .sha)
+          gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+            -f ref="refs/tags/$TAG" -f sha="$tag_sha" --silent
+
+      - name: Verify the tagged JitPack build
+        if: steps.publication.outputs.pending == 'true'
+        env:
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          python3 .github/scripts/verify-release.py "$TAG" \
+            --jitpack-owner "$GITHUB_REPOSITORY_OWNER" --commit "$GITHUB_SHA"
+          GROUP="com.github.$GITHUB_REPOSITORY_OWNER" VERSION="$TAG" \
+            bash .github/scripts/run-gradle.sh -p publication-smoke \
+              -PzealotRepository=jitpack assembleDebug assembleRelease
+
+      - name: Publish the GitHub Release
+        if: steps.publication.outputs.pending == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.prepare.outputs.tag }}
+        run: |
+          git fetch origin "refs/tags/$TAG"
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = "$GITHUB_SHA"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$TAG" --notes-file "$RUNNER_TEMP/release-notes.md"
