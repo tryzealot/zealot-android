@@ -3,13 +3,26 @@
 Check [GitHub Releases](https://github.com/tryzealot/zealot-android/releases)
 for published versions.
 
-## 0.3.1 — Unreleased
+## 0.3.1
+
+### What's Changed
 
 - Update OkHttp to 5.5.1 and align MockWebServer with it. Update the build to
   Android Gradle Plugin 9.5.2 and Gradle 9.9.2, and the tests to Robolectric 4.18.1.
 - Document the versioning and release process.
-- Validate release tags against the SDK version and build an independent Android app against each tagged JitPack publication.
+- Publish stable releases after CI verifies the tagged JitPack artifact in an independent Android app, including a release build with R8.
 - Document the verified upstream Gradle dependency and link to release notes from the README.
+
+### Upgrade
+
+Apps using the accepted `0.3.0` build can replace the dependency SHA with
+`v0.3.1`. Existing Kotlin and Java calls continue to work.
+
+### Versions and Dependencies
+
+- Minimum Android API: 21. Minimum `compileSdk` for consuming apps: 37.
+- Published dependencies: OkHttp `5.5.1` and Kotlin standard library `2.2.10`.
+- SDK build toolchain: JDK `17`, Gradle `9.9.2`, and Android Gradle Plugin `9.5.2`.
 
 ## 0.3.0 — Accepted upstream
 

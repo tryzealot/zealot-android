@@ -5,23 +5,15 @@
 - Reserve `vX.Y.Z` tags for stable releases. Store `X.Y.Z` in `version.properties`. It supplies `Zealot.VERSION` and the SDK identifier sent to the server. JitPack uses the tag or commit SHA as the dependency version.
 - During `0.x`, patch releases contain compatible fixes, documentation, and release tooling. Use a new minor series for features or an explicitly documented breaking change. From `1.0.0`, follow [Semantic Versioning](https://semver.org/).
 - Treat public Kotlin and Java APIs, documented behavior, Android and build requirements, and dependencies exposed by the API as part of the compatibility contract. Explain any required migration in release notes. Deprecate APIs with a replacement before removing them when practical.
-- Official coordinates are `com.github.tryzealot:zealot-android:<tag>`. The package is `im.ews.zealot`. Development builds may use a pinned SHA. Fork candidates use the fork owner's coordinates.
+- Official coordinates are `com.github.tryzealot:zealot-android:<tag>`. The package is `im.ews.zealot`. Development builds may use a pinned SHA with the repository owner's coordinates.
 - Keep published tags immutable. When a release regresses, point consumers to the last working version and publish the fix as a new release.
 
 ## Prepare a release
 
-1. Start a short branch from upstream `master` and open a PR. Set `sdkVersion` in `version.properties` and update [CHANGELOG.md](CHANGELOG.md). Link user-facing changes to the corresponding PRs.
+1. Start a short branch from upstream `master`. In the release PR, increase `sdkVersion` in `version.properties` and add a matching `## X.Y.Z` section to [CHANGELOG.md](CHANGELOG.md). Link user-facing changes to the corresponding PRs.
 2. Wait for Android CI. It builds the SDK and sample, runs lint and unit tests, and compiles an independent Java consumer against the local Maven publication in debug and release with R8.
 3. To test JitPack before tagging, build the independent consumer against the exact reviewed commit SHA on the fork. If runtime behavior changed, test that same SHA in a representative app.
-4. After merge, a maintainer creates an annotated tag on the intended upstream commit after its branch CI passes. The tag push runs Android CI and validates the version, JitPack POM, and build commit. It then builds the independent consumer using the remote artifact.
-
-From a checkout where `upstream` points to the original repository, set `tag`
-and `commit` to the reviewed release tag and SHA, then push that tag.
-
-```sh
-git tag -a "$tag" "$commit" -m "Zealot Android SDK $tag"
-git push upstream "refs/tags/$tag"
-```
+4. After merge, wait for the Android workflow on upstream `master`. Its release job creates an annotated tag on the commit that passed CI, verifies that JitPack built that exact commit, and builds the independent consumer in debug and release with R8 before publishing.
 
 To verify an untagged commit, set `owner` to the fork owner and `commit` to the
 full SHA.
@@ -40,32 +32,42 @@ GROUP="com.github.$owner" VERSION="$tag" \
   ./gradlew -p publication-smoke -PzealotRepository=jitpack assembleDebug assembleRelease
 ```
 
-For tags made before the tag checks were introduced, run the consumer build with
-the published tag and verify its commit in JitPack's build record. The first planned
-stable tag, `v0.3.0`, points to
-`e8a168e75f552a133111ffc3bd320967e04c1972`, the merge commit for [#3](https://github.com/tryzealot/zealot-android/pull/3).
+## Automatic publication
 
-## Publish the GitHub Release
+The release job runs only after a successful push build on
+`tryzealot/zealot-android:master`. Its repository `GITHUB_TOKEN` needs
+`contents: write`, and repository rules must allow it to create release tags.
+The introduction of the workflow releases `0.3.1`. Subsequent releases require
+a version increase. Ordinary pushes with the same version skip publication.
 
-Create a draft in [GitHub Releases](https://github.com/tryzealot/zealot-android/releases)
-for the existing tag. Use the tag as the release title. Prepare the body from
-the changelog and merged PRs, following the structure used by
+GitHub does not start a tag-push workflow when `GITHUB_TOKEN` creates the tag,
+so the release job runs JitPack and consumer verification itself.
+
+The workflow uses the matching changelog section as the body of the
+[GitHub Release](https://github.com/tryzealot/zealot-android/releases), with
+the tag as the title. Write the section using the structure below, inspired by
 [Decompose releases](https://github.com/arkivanov/Decompose/releases).
 
 | Section | What readers need |
 | --- | --- |
 | Opening note | A known regression or required migration goes first when it affects whether to upgrade. |
 | What's Changed | User-facing changes with PR links and contributor credit. Group by topic when there are enough entries. |
-| Installation | The exact Gradle dependency for this tag and the JitPack repository. Include upgrade steps when needed. |
+| Upgrade | Any steps required to move from the previous release. |
 | Versions and Dependencies | Android and compile SDK requirements, dependencies shipped to consumers, and the toolchain used to build the SDK. |
 | New Contributors | Optional credit for first-time contributions. |
-| Full Changelog | A compare link from the previous stable tag to the new tag. For the first tagged release, use the prior baseline commit. |
 
-Publish the draft only after the tag's CI and JitPack verification pass.
-Set releases on the current series as **Latest**. JitPack serves the SDK
-artifact. The GitHub entry points to the exact dependency and records what changed.
+Use `###` for headings within the version's changelog section. The workflow
+adds **Installation** with the exact Gradle dependency and a **Full Changelog**
+link from the previous stable tag. The first release compares against the
+accepted `0.3.0` commit from [#3](https://github.com/tryzealot/zealot-android/pull/3).
 
-If verification fails, inspect JitPack's build log. Retry verification for an
-infrastructure failure. If the source needs a fix, use a new tag and keep the
-failed draft unpublished. If a published release has a regression, add a note
-with the affected versions, the workaround, and the replacement when available.
+## Recover a failed release
+
+For a transient failure, rerun the failed jobs in the original Android workflow
+run. The release job reuses an existing tag on the same commit and skips an
+already published release. It stops if the tag points elsewhere or a manual
+release draft needs review.
+
+If a tagged build needs a code fix, increase the version in a new PR. If a
+published release has a regression, add a note with the affected versions,
+the workaround, and the replacement when available.
