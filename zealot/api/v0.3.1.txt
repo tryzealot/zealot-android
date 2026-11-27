@@ -1,0 +1,125 @@
+# com.github.tryzealot:zealot-android:v0.3.1 (4ab5b7f957ce98d487457b59b96c658beaab1261)
+# AAR SHA-256: 22b31276d3587b364ffa048ae4825170bcb79eea16346053d516d6c73be83b20
+im.ews.zealot.Callback | public final class im.ews.zealot.Callback implements okhttp3.Callback
+im.ews.zealot.Callback | public final im.ews.zealot.Zealot getZealot(); ()Lim/ews/zealot/Zealot;
+im.ews.zealot.Callback | public im.ews.zealot.Callback(im.ews.zealot.Zealot); (Lim/ews/zealot/Zealot;)V
+im.ews.zealot.Callback | public void onFailure(okhttp3.Call, java.io.IOException); (Lokhttp3/Call;Ljava/io/IOException;)V
+im.ews.zealot.Callback | public void onResponse(okhttp3.Call, okhttp3.Response); (Lokhttp3/Call;Lokhttp3/Response;)V
+im.ews.zealot.ReleaseInfo | public boolean equals(java.lang.Object); (Ljava/lang/Object;)Z
+im.ews.zealot.ReleaseInfo | public final class im.ews.zealot.ReleaseInfo
+im.ews.zealot.ReleaseInfo | public final im.ews.zealot.ReleaseInfo copy(java.lang.String, java.lang.String, java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lim/ews/zealot/ReleaseInfo;
+im.ews.zealot.ReleaseInfo | public final java.lang.String component1(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String component2(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String component3(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String component4(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String getBuildVersion(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String getChangelog(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String getInstallUrl(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public final java.lang.String getReleaseVersion(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public im.ews.zealot.ReleaseInfo(java.lang.String, java.lang.String, java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+im.ews.zealot.ReleaseInfo | public int hashCode(); ()I
+im.ews.zealot.ReleaseInfo | public java.lang.String toString(); ()Ljava/lang/String;
+im.ews.zealot.ReleaseInfo | public static im.ews.zealot.ReleaseInfo copy$default(im.ews.zealot.ReleaseInfo, java.lang.String, java.lang.String, java.lang.String, java.lang.String, int, java.lang.Object); (Lim/ews/zealot/ReleaseInfo;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lim/ews/zealot/ReleaseInfo;
+im.ews.zealot.UpdateCallback | public abstract void onError(im.ews.zealot.UpdateError); (Lim/ews/zealot/UpdateError;)V
+im.ews.zealot.UpdateCallback | public abstract void onUpToDate(); ()V
+im.ews.zealot.UpdateCallback | public abstract void onUpdateAvailable(im.ews.zealot.ReleaseInfo); (Lim/ews/zealot/ReleaseInfo;)V
+im.ews.zealot.UpdateCallback | public interface im.ews.zealot.UpdateCallback
+im.ews.zealot.UpdateDialogOptions | public boolean equals(java.lang.Object); (Ljava/lang/Object;)Z
+im.ews.zealot.UpdateDialogOptions | public final boolean component4(); ()Z
+im.ews.zealot.UpdateDialogOptions | public final boolean getCancelable(); ()Z
+im.ews.zealot.UpdateDialogOptions | public final class im.ews.zealot.UpdateDialogOptions
+im.ews.zealot.UpdateDialogOptions | public final im.ews.zealot.UpdateDialogOptions copy(java.lang.String, java.lang.String, java.lang.String, boolean); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)Lim/ews/zealot/UpdateDialogOptions;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String component1(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String component2(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String component3(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String getLaterButtonText(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String getTitle(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public final java.lang.String getUpdateButtonText(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(); ()V
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(java.lang.String); (Ljava/lang/String;)V
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;)V
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(java.lang.String, java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(java.lang.String, java.lang.String, java.lang.String, boolean); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
+im.ews.zealot.UpdateDialogOptions | public im.ews.zealot.UpdateDialogOptions(java.lang.String, java.lang.String, java.lang.String, boolean, int, kotlin.jvm.internal.DefaultConstructorMarker); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+im.ews.zealot.UpdateDialogOptions | public int hashCode(); ()I
+im.ews.zealot.UpdateDialogOptions | public java.lang.String toString(); ()Ljava/lang/String;
+im.ews.zealot.UpdateDialogOptions | public static im.ews.zealot.UpdateDialogOptions copy$default(im.ews.zealot.UpdateDialogOptions, java.lang.String, java.lang.String, java.lang.String, boolean, int, java.lang.Object); (Lim/ews/zealot/UpdateDialogOptions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Lim/ews/zealot/UpdateDialogOptions;
+im.ews.zealot.UpdateError | public boolean equals(java.lang.Object); (Ljava/lang/Object;)Z
+im.ews.zealot.UpdateError | public final class im.ews.zealot.UpdateError
+im.ews.zealot.UpdateError | public final im.ews.zealot.UpdateError copy(im.ews.zealot.UpdateErrorCode, java.lang.String, java.lang.Integer); (Lim/ews/zealot/UpdateErrorCode;Ljava/lang/String;Ljava/lang/Integer;)Lim/ews/zealot/UpdateError;
+im.ews.zealot.UpdateError | public final im.ews.zealot.UpdateErrorCode component1(); ()Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateError | public final im.ews.zealot.UpdateErrorCode getCode(); ()Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateError | public final java.lang.Integer component3(); ()Ljava/lang/Integer;
+im.ews.zealot.UpdateError | public final java.lang.Integer getHttpStatusCode(); ()Ljava/lang/Integer;
+im.ews.zealot.UpdateError | public final java.lang.String component2(); ()Ljava/lang/String;
+im.ews.zealot.UpdateError | public final java.lang.String getMessage(); ()Ljava/lang/String;
+im.ews.zealot.UpdateError | public im.ews.zealot.UpdateError(im.ews.zealot.UpdateErrorCode, java.lang.String, java.lang.Integer); (Lim/ews/zealot/UpdateErrorCode;Ljava/lang/String;Ljava/lang/Integer;)V
+im.ews.zealot.UpdateError | public im.ews.zealot.UpdateError(im.ews.zealot.UpdateErrorCode, java.lang.String, java.lang.Integer, int, kotlin.jvm.internal.DefaultConstructorMarker); (Lim/ews/zealot/UpdateErrorCode;Ljava/lang/String;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+im.ews.zealot.UpdateError | public int hashCode(); ()I
+im.ews.zealot.UpdateError | public java.lang.String toString(); ()Ljava/lang/String;
+im.ews.zealot.UpdateError | public static im.ews.zealot.UpdateError copy$default(im.ews.zealot.UpdateError, im.ews.zealot.UpdateErrorCode, java.lang.String, java.lang.Integer, int, java.lang.Object); (Lim/ews/zealot/UpdateError;Lim/ews/zealot/UpdateErrorCode;Ljava/lang/String;Ljava/lang/Integer;ILjava/lang/Object;)Lim/ews/zealot/UpdateError;
+im.ews.zealot.UpdateErrorCode | public final class im.ews.zealot.UpdateErrorCode extends java.lang.Enum<im.ews.zealot.UpdateErrorCode>
+im.ews.zealot.UpdateErrorCode | public static final im.ews.zealot.UpdateErrorCode HTTP; Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateErrorCode | public static final im.ews.zealot.UpdateErrorCode INVALID_RESPONSE; Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateErrorCode | public static final im.ews.zealot.UpdateErrorCode NETWORK; Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateErrorCode | public static im.ews.zealot.UpdateErrorCode valueOf(java.lang.String); (Ljava/lang/String;)Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateErrorCode | public static im.ews.zealot.UpdateErrorCode[] values(); ()[Lim/ews/zealot/UpdateErrorCode;
+im.ews.zealot.UpdateErrorCode | public static kotlin.enums.EnumEntries<im.ews.zealot.UpdateErrorCode> getEntries(); ()Lkotlin/enums/EnumEntries;
+im.ews.zealot.UpdatePresenter | public abstract void present(android.app.Activity, im.ews.zealot.ReleaseInfo); (Landroid/app/Activity;Lim/ews/zealot/ReleaseInfo;)V
+im.ews.zealot.UpdatePresenter | public interface im.ews.zealot.UpdatePresenter
+im.ews.zealot.UpdateResult | public abstract class im.ews.zealot.UpdateResult
+im.ews.zealot.UpdateResult | public im.ews.zealot.UpdateResult(kotlin.jvm.internal.DefaultConstructorMarker); (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+im.ews.zealot.UpdateResult$Error | public boolean equals(java.lang.Object); (Ljava/lang/Object;)Z
+im.ews.zealot.UpdateResult$Error | public final class im.ews.zealot.UpdateResult$Error extends im.ews.zealot.UpdateResult
+im.ews.zealot.UpdateResult$Error | public final im.ews.zealot.UpdateError component1(); ()Lim/ews/zealot/UpdateError;
+im.ews.zealot.UpdateResult$Error | public final im.ews.zealot.UpdateError getError(); ()Lim/ews/zealot/UpdateError;
+im.ews.zealot.UpdateResult$Error | public final im.ews.zealot.UpdateResult$Error copy(im.ews.zealot.UpdateError); (Lim/ews/zealot/UpdateError;)Lim/ews/zealot/UpdateResult$Error;
+im.ews.zealot.UpdateResult$Error | public im.ews.zealot.UpdateResult$Error(im.ews.zealot.UpdateError); (Lim/ews/zealot/UpdateError;)V
+im.ews.zealot.UpdateResult$Error | public int hashCode(); ()I
+im.ews.zealot.UpdateResult$Error | public java.lang.String toString(); ()Ljava/lang/String;
+im.ews.zealot.UpdateResult$Error | public static im.ews.zealot.UpdateResult$Error copy$default(im.ews.zealot.UpdateResult$Error, im.ews.zealot.UpdateError, int, java.lang.Object); (Lim/ews/zealot/UpdateResult$Error;Lim/ews/zealot/UpdateError;ILjava/lang/Object;)Lim/ews/zealot/UpdateResult$Error;
+im.ews.zealot.UpdateResult$UpToDate | public final class im.ews.zealot.UpdateResult$UpToDate extends im.ews.zealot.UpdateResult
+im.ews.zealot.UpdateResult$UpToDate | public static final im.ews.zealot.UpdateResult$UpToDate INSTANCE; Lim/ews/zealot/UpdateResult$UpToDate;
+im.ews.zealot.UpdateResult$UpdateAvailable | public boolean equals(java.lang.Object); (Ljava/lang/Object;)Z
+im.ews.zealot.UpdateResult$UpdateAvailable | public final class im.ews.zealot.UpdateResult$UpdateAvailable extends im.ews.zealot.UpdateResult
+im.ews.zealot.UpdateResult$UpdateAvailable | public final im.ews.zealot.ReleaseInfo component1(); ()Lim/ews/zealot/ReleaseInfo;
+im.ews.zealot.UpdateResult$UpdateAvailable | public final im.ews.zealot.ReleaseInfo getRelease(); ()Lim/ews/zealot/ReleaseInfo;
+im.ews.zealot.UpdateResult$UpdateAvailable | public final im.ews.zealot.UpdateResult$UpdateAvailable copy(im.ews.zealot.ReleaseInfo); (Lim/ews/zealot/ReleaseInfo;)Lim/ews/zealot/UpdateResult$UpdateAvailable;
+im.ews.zealot.UpdateResult$UpdateAvailable | public im.ews.zealot.UpdateResult$UpdateAvailable(im.ews.zealot.ReleaseInfo); (Lim/ews/zealot/ReleaseInfo;)V
+im.ews.zealot.UpdateResult$UpdateAvailable | public int hashCode(); ()I
+im.ews.zealot.UpdateResult$UpdateAvailable | public java.lang.String toString(); ()Ljava/lang/String;
+im.ews.zealot.UpdateResult$UpdateAvailable | public static im.ews.zealot.UpdateResult$UpdateAvailable copy$default(im.ews.zealot.UpdateResult$UpdateAvailable, im.ews.zealot.ReleaseInfo, int, java.lang.Object); (Lim/ews/zealot/UpdateResult$UpdateAvailable;Lim/ews/zealot/ReleaseInfo;ILjava/lang/Object;)Lim/ews/zealot/UpdateResult$UpdateAvailable;
+im.ews.zealot.UpdateResultCallback | public abstract void onResult(im.ews.zealot.UpdateResult); (Lim/ews/zealot/UpdateResult;)V
+im.ews.zealot.UpdateResultCallback | public interface im.ews.zealot.UpdateResultCallback
+im.ews.zealot.Zealot | public final android.content.Context getContext(); ()Landroid/content/Context;
+im.ews.zealot.Zealot | public final class im.ews.zealot.Zealot
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setAlertMaxHeight(im.ews.zealot.Zealot$ScreenHeight); (Lim/ews/zealot/Zealot$ScreenHeight;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setBuildType(java.lang.String); (Ljava/lang/String;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setCallbackExecutor(java.util.concurrent.Executor); (Ljava/util/concurrent/Executor;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setChannelKey(java.lang.String); (Ljava/lang/String;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setChannelKey(java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setDialogOptions(im.ews.zealot.UpdateDialogOptions); (Lim/ews/zealot/UpdateDialogOptions;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setEndpoint(java.lang.String); (Ljava/lang/String;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setHttpClient(okhttp3.OkHttpClient); (Lokhttp3/OkHttpClient;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final im.ews.zealot.Zealot setUpdatePresenter(im.ews.zealot.UpdatePresenter); (Lim/ews/zealot/UpdatePresenter;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public final okhttp3.Call checkAndShowUpdate(); ()Lokhttp3/Call;
+im.ews.zealot.Zealot | public final okhttp3.Call checkAndShowUpdate(im.ews.zealot.UpdateCallback); (Lim/ews/zealot/UpdateCallback;)Lokhttp3/Call;
+im.ews.zealot.Zealot | public final okhttp3.Call checkAndShowUpdate(im.ews.zealot.UpdateResultCallback); (Lim/ews/zealot/UpdateResultCallback;)Lokhttp3/Call;
+im.ews.zealot.Zealot | public final okhttp3.Call checkForUpdate(im.ews.zealot.UpdateCallback); (Lim/ews/zealot/UpdateCallback;)Lokhttp3/Call;
+im.ews.zealot.Zealot | public final okhttp3.Call checkForUpdate(im.ews.zealot.UpdateResultCallback); (Lim/ews/zealot/UpdateResultCallback;)Lokhttp3/Call;
+im.ews.zealot.Zealot | public final void launch(); ()V
+im.ews.zealot.Zealot | public final void launch(im.ews.zealot.UpdateCallback); (Lim/ews/zealot/UpdateCallback;)V
+im.ews.zealot.Zealot | public final void launch(im.ews.zealot.UpdateResultCallback); (Lim/ews/zealot/UpdateResultCallback;)V
+im.ews.zealot.Zealot | public final void showAlert(java.lang.String, java.lang.String, java.lang.String); (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
+im.ews.zealot.Zealot | public static final im.ews.zealot.Zealot create(android.content.Context); (Landroid/content/Context;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot | public static final im.ews.zealot.Zealot$Companion Companion; Lim/ews/zealot/Zealot$Companion;
+im.ews.zealot.Zealot | public static final java.lang.String BUILD_TYPE; Ljava/lang/String;
+im.ews.zealot.Zealot | public static final java.lang.String VERSION; Ljava/lang/String;
+im.ews.zealot.Zealot$Companion | public final class im.ews.zealot.Zealot$Companion
+im.ews.zealot.Zealot$Companion | public final im.ews.zealot.Zealot create(android.content.Context); (Landroid/content/Context;)Lim/ews/zealot/Zealot;
+im.ews.zealot.Zealot$ScreenHeight | public final class im.ews.zealot.Zealot$ScreenHeight extends java.lang.Enum<im.ews.zealot.Zealot$ScreenHeight>
+im.ews.zealot.Zealot$ScreenHeight | public static final im.ews.zealot.Zealot$ScreenHeight AUTOMATIC; Lim/ews/zealot/Zealot$ScreenHeight;
+im.ews.zealot.Zealot$ScreenHeight | public static final im.ews.zealot.Zealot$ScreenHeight HALFSCREEN; Lim/ews/zealot/Zealot$ScreenHeight;
+im.ews.zealot.Zealot$ScreenHeight | public static im.ews.zealot.Zealot$ScreenHeight valueOf(java.lang.String); (Ljava/lang/String;)Lim/ews/zealot/Zealot$ScreenHeight;
+im.ews.zealot.Zealot$ScreenHeight | public static im.ews.zealot.Zealot$ScreenHeight[] values(); ()[Lim/ews/zealot/Zealot$ScreenHeight;
+im.ews.zealot.Zealot$ScreenHeight | public static kotlin.enums.EnumEntries<im.ews.zealot.Zealot$ScreenHeight> getEntries(); ()Lkotlin/enums/EnumEntries;

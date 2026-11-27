@@ -27,11 +27,10 @@ dependencyResolutionManagement {
 ~~~
 
 Use the dependency version shown in [GitHub Releases](https://github.com/tryzealot/zealot-android/releases).
-Until the first tagged release, use the verified upstream commit:
 
 ~~~groovy
 dependencies {
-    implementation 'com.github.tryzealot:zealot-android:e8a168e75f552a133111ffc3bd320967e04c1972'
+    implementation 'com.github.tryzealot:zealot-android:v0.3.1'
 }
 ~~~
 
@@ -201,6 +200,40 @@ Zealot.create(this)
 
 The same methods are callable from Java. Implement UpdateCallback with the three methods shown above, or use the fluent launch() API.
 
+## Check for updates when an Activity starts
+
+`createStartupCheck()` is available in the development version. Configure Zealot
+with the Activity and keep one helper per Activity instance. Call the helper
+from the Activity's lifecycle methods on the main thread.
+
+~~~kotlin
+class MainActivity : Activity() {
+    private val updateCheck by lazy {
+        Zealot.create(this)
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("your-channel-key")
+            .createStartupCheck()
+    }
+
+    override fun onPostResume() {
+        super.onPostResume()
+        updateCheck.onResume()
+    }
+
+    override fun onPause() {
+        updateCheck.onPause()
+        super.onPause()
+    }
+}
+~~~
+
+An available release uses the configured presenter or the built-in dialog.
+The helper stops checking after the first successful result. A failed check
+retries on the next resume. Pausing cancels an active request and suppresses
+any queued result or dialog from it. You can pass a result callback to
+`createStartupCheck(callback)` to receive outcomes on the main thread.
+Both overloads are also available in Java.
+
 ## Zealot API
 
 The SDK calls GET /api/apps/latest and sends channel_key, bundle_id, release_version, and build_version. Zealot filters the channel's releases against the installed app version. The current SDK also sends sdk=android-<sdk-version> as client metadata. A successful response with no releases is reported as up to date. Non-2xx responses, network failures, and invalid response data are reported through onError.
@@ -233,7 +266,11 @@ The public `Zealot` class holds a snapshot of each check's configuration. Reques
 construction, response parsing, result delivery, and the optional dialog live in
 separate internal components, so non-UI checks do not depend on presentation.
 
-Use JDK 17 or newer to run the Gradle build. The example app lets you enter your own Zealot server URL and Android channel key at runtime. It shows the update result and cancels an active request if its Activity closes; no key is committed to the repository. Its debug build permits HTTP for local server testing. Use HTTPS for a release build.
+Use JDK 17 or newer to run the Gradle build. In the example app, enter a Zealot
+server URL and Android channel key, then tap **Check for update** to start the
+helper. Backgrounding the app cancels a pending check. Returning to the same
+Activity retries a cancelled or failed check. Its debug build permits HTTP
+for local server testing. Use HTTPS for a release build.
 
 Build the library and sample app:
 
@@ -247,7 +284,7 @@ Run the library tests and lint checks:
 ./gradlew :zealot:testDebugUnitTest :zealot:lint :app:lint
 ~~~
 
-To verify the published AAR as an independent Java consumer, publish locally and build
+To verify the published AAR with independent Java and Kotlin consumers, publish locally and build
 the small `publication-smoke` project. Its release build runs R8. Both builds read
 the SDK version from `version.properties`:
 
@@ -281,8 +318,8 @@ adb -s <serial> shell am start -n im.ews.zealot.publicationsmoke/.ConsumerActivi
 ~~~
 
 The screen shows `Update available: 2.0`. Change `/available` to `/current` or
-`/error` to exercise the other outcomes. Only this test app's debug variant
-permits HTTP.
+`/error` to exercise the other outcomes. On an emulator running API 23 or newer,
+enter the same URL and key in the debug example app to test the startup helper.
 
 To verify the live Zealot contract against a channel with at least two Android releases
 of the same app, set the endpoint and channel key for one local test run:

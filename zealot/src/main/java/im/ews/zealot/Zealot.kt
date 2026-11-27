@@ -140,6 +140,18 @@ class Zealot private constructor(context: Context) {
     fun checkAndShowUpdate(callback: UpdateResultCallback): Call =
         checkAndShowUpdate(callback.asUpdateCallback())
 
+    /**
+     * Creates a startup check for the Activity used to create this SDK instance.
+     * The optional result callback runs on the main thread with the lifecycle methods.
+     */
+    @JvmOverloads
+    fun createStartupCheck(callback: UpdateResultCallback? = null): StartupUpdateCheck {
+        check(activityReference?.get() != null) { "a startup check requires an Activity" }
+        return StartupUpdateCheck.create(callback) { resultCallback ->
+            startCheck(resultCallback.asUpdateCallback(), showDialog = true, deliverOnMain = true)
+        }
+    }
+
     /** Compatibility entry point: shows an update dialog when created from an Activity. */
     fun launch() {
         checkAndShowUpdate()
@@ -169,7 +181,11 @@ class Zealot private constructor(context: Context) {
         }
     }
 
-    private fun startCheck(callback: UpdateCallback?, showDialog: Boolean): Call {
+    private fun startCheck(
+        callback: UpdateCallback?,
+        showDialog: Boolean,
+        deliverOnMain: Boolean = false
+    ): Call {
         val settings = configuration
         val request = createRequest(settings)
         val delegate = (settings.httpClient ?: defaultClient).newCall(request)
@@ -178,7 +194,7 @@ class Zealot private constructor(context: Context) {
             configure(
                 callback,
                 showDialog = showDialog,
-                callbackExecutor = settings.callbackExecutor,
+                callbackExecutor = if (deliverOnMain) null else settings.callbackExecutor,
                 presenter = settings.presenter,
                 maxHeight = settings.maxHeight,
                 dialogOptions = settings.dialogOptions,

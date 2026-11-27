@@ -3,6 +3,14 @@
 Check [GitHub Releases](https://github.com/tryzealot/zealot-android/releases)
 for published versions.
 
+## Unreleased
+
+- Add an opt-in update check that follows an Activity's resume and pause events.
+  It retries on the next resume after an error or cancellation and stops after
+  the first successful result.
+- Verify JVM compatibility with the published `v0.3.1` AAR in CI and build
+  independent Java and Kotlin consumers in debug and release with R8.
+
 ## 0.3.1
 
 ### What's Changed

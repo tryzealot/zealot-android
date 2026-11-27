@@ -28,6 +28,7 @@ import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -155,6 +156,93 @@ class ZealotIntegrationTest {
         assertTrue(call.isCanceled())
         assertFalse(presented.get())
         assertFalse(delivered.get())
+    }
+
+    @Test
+    fun startupCheckCancelsQueuedUiRetriesErrorsAndStopsAfterSuccess() {
+        val idleEvents = LinkedBlockingQueue<Unit>()
+        val requests = AtomicInteger()
+        val presentations = mutableListOf<ReleaseInfo>()
+        val results = mutableListOf<UpdateResult>()
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            val requestNumber = requests.incrementAndGet()
+            if (requestNumber == 2) {
+                response(chain.request(), 503, "{}")
+            } else {
+                response(chain.request(), 200, """{"releases":[{"release_version":"2.0",
+                    "build_version":"12","install_url":"https://zealot.example.com/install"}]}""")
+            }
+        }.build().also {
+            it.dispatcher.idleCallback = Runnable { idleEvents.add(Unit) }
+        }
+        val check = Zealot.create(activity())
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("key")
+            .setHttpClient(client)
+            .setCallbackExecutor(Executor { /* The startup check uses the main thread. */ })
+            .setUpdatePresenter { _, release -> presentations.add(release) }
+            .createStartupCheck { result ->
+                assertEquals(Looper.getMainLooper(), Looper.myLooper())
+                results.add(result)
+            }
+        val main = Shadows.shadowOf(Looper.getMainLooper())
+
+        check.onResume()
+        check.onResume()
+        assertNotNull(idleEvents.poll(5, TimeUnit.SECONDS))
+        check.onPause()
+        main.idle()
+        assertTrue(presentations.isEmpty())
+        assertTrue(results.isEmpty())
+
+        check.onResume()
+        assertNotNull(idleEvents.poll(5, TimeUnit.SECONDS))
+        main.idle()
+        assertTrue(results.single() is UpdateResult.Error)
+        check.onResume()
+        assertEquals(2, requests.get())
+
+        check.onPause()
+        check.onResume()
+        assertNotNull(idleEvents.poll(5, TimeUnit.SECONDS))
+        main.idle()
+        assertEquals((results.last() as UpdateResult.UpdateAvailable).release, presentations.single())
+        check.onPause()
+        check.onResume()
+        assertTrue(client.dispatcher.runningCalls().isEmpty())
+        assertTrue(client.dispatcher.queuedCalls().isEmpty())
+        assertEquals(3, requests.get())
+        assertEquals(2, results.size)
+    }
+
+    @Test
+    fun startupCheckStopsAfterAnUpToDateResult() {
+        val requestFinished = CountDownLatch(1)
+        val requests = AtomicInteger()
+        val results = mutableListOf<UpdateResult>()
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            requests.incrementAndGet()
+            response(chain.request(), 200, """{"releases":[]}""")
+        }.build().also {
+            it.dispatcher.idleCallback = Runnable { requestFinished.countDown() }
+        }
+        val check = Zealot.create(activity())
+            .setEndpoint("https://zealot.example.com")
+            .setChannelKey("key")
+            .setHttpClient(client)
+            .setUpdatePresenter { _, _ -> error("No release to present") }
+            .createStartupCheck { results.add(it) }
+
+        check.onResume()
+        assertTrue(requestFinished.await(5, TimeUnit.SECONDS))
+        Shadows.shadowOf(Looper.getMainLooper()).idle()
+        check.onPause()
+        check.onResume()
+
+        assertEquals(listOf(UpdateResult.UpToDate), results)
+        assertTrue(client.dispatcher.runningCalls().isEmpty())
+        assertTrue(client.dispatcher.queuedCalls().isEmpty())
+        assertEquals(1, requests.get())
     }
 
     @Test

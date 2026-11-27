@@ -9,12 +9,12 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import im.ews.zealot.StartupUpdateCheck
 import im.ews.zealot.UpdateResult
 import im.ews.zealot.Zealot
-import okhttp3.Call
 
 class MainActivity : AppCompatActivity() {
-    private var updateCall: Call? = null
+    private var startupCheck: StartupUpdateCheck? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,9 +55,9 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            checkButton.isEnabled = false
+            startupCheck?.onPause()
             status.setText(R.string.check_status_loading)
-            updateCall = zealot.checkAndShowUpdate { result ->
+            startupCheck = zealot.createStartupCheck { result ->
                 when (result) {
                     is UpdateResult.UpdateAvailable -> {
                         status.text = getString(
@@ -71,15 +71,18 @@ class MainActivity : AppCompatActivity() {
                     is UpdateResult.Error ->
                         status.text = getString(R.string.check_status_error, result.error.message)
                 }
-                checkButton.isEnabled = true
-                updateCall = null
             }
+            startupCheck?.onResume()
         }
     }
 
-    override fun onDestroy() {
-        updateCall?.cancel()
-        updateCall = null
-        super.onDestroy()
+    override fun onPostResume() {
+        super.onPostResume()
+        startupCheck?.onResume()
+    }
+
+    override fun onPause() {
+        startupCheck?.onPause()
+        super.onPause()
     }
 }

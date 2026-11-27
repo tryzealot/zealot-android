@@ -5,5 +5,8 @@
         <activity
             android:name=".ConsumerActivity"
             android:exported="false" />
+        <activity
+            android:name=".KotlinConsumerActivity"
+            android:exported="false" />
     </application>
 </manifest>
