@@ -49,7 +49,7 @@ coordinate, commit and AAR SHA-256 in the snapshot, then update the CI path.
 ```sh
 python3 .github/scripts/check-api.py "$published_aar" --snapshot \
   $(awk -F ' [|] ' '!/^#/ { print $1 }' zealot/api/v0.3.1.txt | sort -u) \
-  im.ews.zealot.StartupUpdateCheck
+  im.ews.zealot.StartupUpdateCheck im.ews.zealot.UpdatePrompts
 ```
 
 ## Automatic publication

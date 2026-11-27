@@ -1,0 +1,17 @@
+<resources>
+  <string name="zealot_update_title">Nouvelle version %1$s</string>
+  <string name="zealot_update_later">Plus tard</string>
+  <string name="zealot_update_now">Mettre à jour</string>
+  <string name="zealot_prompt_available">Mise à jour disponible</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">Nouveautés</string>
+  <string name="zealot_prompt_hide_notes">Masquer les nouveautés</string>
+  <string name="zealot_prompt_open">Ouvrir la mise à jour</string>
+  <string name="zealot_prompt_open_failed">Impossible d’ouvrir le lien. Réessayez quand un navigateur est disponible.</string>
+  <string name="zealot_prompt_checking">Recherche de mises à jour…</string>
+  <string name="zealot_prompt_current">Vous avez la dernière version</string>
+  <string name="zealot_prompt_check_failed">Impossible de rechercher des mises à jour</string>
+  <string name="zealot_prompt_check_hint">Vérifiez votre connexion Internet ou réessayez dans un instant.</string>
+  <string name="zealot_prompt_retry">Réessayer</string>
+  <string name="zealot_prompt_dismiss">Fermer</string>
+</resources>

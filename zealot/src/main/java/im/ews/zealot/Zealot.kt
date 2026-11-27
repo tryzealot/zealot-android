@@ -18,6 +18,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -53,7 +54,8 @@ class Zealot private constructor(context: Context) {
         val httpClient: OkHttpClient? = null,
         val presenter: UpdatePresenter? = null,
         val callbackExecutor: Executor? = null,
-        val dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
+        val dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
+        val locale: Locale? = null
     )
 
     private val applicationContext = context.applicationContext ?: context
@@ -117,6 +119,18 @@ class Zealot private constructor(context: Context) {
         return this
     }
 
+    /**
+     * Sets the language of Zealot's built-in UI. Pass null to follow the Activity's language.
+     * Set this before starting a check or attaching automatic prompts.
+     */
+    fun setLocale(locale: Locale?): Zealot {
+        updateConfiguration { it.copy(locale = locale) }
+        return this
+    }
+
+    @JvmSynthetic
+    internal fun currentLocale(): Locale? = configuration.locale
+
     /** Sets callback delivery; pass null to restore the Android main thread. */
     fun setCallbackExecutor(executor: Executor?): Zealot {
         updateConfiguration { it.copy(callbackExecutor = executor) }
@@ -152,6 +166,22 @@ class Zealot private constructor(context: Context) {
         }
     }
 
+    /**
+     * Enables automatic update prompts on the Activity used to create this client.
+     * Call on the main thread after configuring the endpoint and channel. The returned handle
+     * supports manual checks and is closed automatically when the Activity is destroyed.
+     */
+    fun enableUpdatePrompts(): UpdatePrompts {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "enable update prompts on the main thread" }
+        val activity = checkNotNull(activityReference?.get()) { "update prompts require an Activity" }
+        val settings = configuration
+        val endpoint = settings.requireEndpoint()
+        val channelKey = settings.requireChannelKey()
+        return UpdatePrompts.attach(activity, endpoint, channelKey, settings.locale) { callback ->
+            startCheck(callback.asUpdateCallback(), showDialog = false, deliverOnMain = true, settings = settings)
+        }
+    }
+
     /** Compatibility entry point: shows an update dialog when created from an Activity. */
     fun launch() {
         checkAndShowUpdate()
@@ -184,9 +214,9 @@ class Zealot private constructor(context: Context) {
     private fun startCheck(
         callback: UpdateCallback?,
         showDialog: Boolean,
-        deliverOnMain: Boolean = false
+        deliverOnMain: Boolean = false,
+        settings: Configuration = configuration
     ): Call {
-        val settings = configuration
         val request = createRequest(settings)
         val delegate = (settings.httpClient ?: defaultClient).newCall(request)
         val call = UserCancellableCall(delegate)
@@ -198,7 +228,8 @@ class Zealot private constructor(context: Context) {
                 presenter = settings.presenter,
                 maxHeight = settings.maxHeight,
                 dialogOptions = settings.dialogOptions,
-                cancelledByUser = call.cancelledByUser
+                cancelledByUser = call.cancelledByUser,
+                locale = settings.locale
             )
         })
         return call
@@ -207,14 +238,17 @@ class Zealot private constructor(context: Context) {
     @JvmSynthetic
     internal fun createRequest(): Request = createRequest(configuration)
 
+    private fun Configuration.requireEndpoint(): HttpUrl =
+        checkNotNull(endpoint) { "endpoint must be set before checking for updates" }
+
+    private fun Configuration.requireChannelKey(): String =
+        checkNotNull(channelKeys[buildType] ?: channelKeys[BUILD_TYPE]) {
+            "channelKey is not configured for build type '$buildType'"
+        }
+
     private fun createRequest(settings: Configuration): Request {
-        val endpoint = settings.endpoint
-            ?: throw IllegalStateException("endpoint must be set before checking for updates")
-        val channelKey = settings.channelKeys[settings.buildType]
-            ?: settings.channelKeys[BUILD_TYPE]
-            ?: throw IllegalStateException(
-                "channelKey is not configured for build type '${settings.buildType}'"
-            )
+        val endpoint = settings.requireEndpoint()
+        val channelKey = settings.requireChannelKey()
         val info = packageInfo()
         val buildVersion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             info.longVersionCode
@@ -255,11 +289,12 @@ class Zealot private constructor(context: Context) {
         presenter: UpdatePresenter?,
         maxHeight: ScreenHeight?,
         dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
-        cancelledByUser: AtomicBoolean? = null
+        cancelledByUser: AtomicBoolean? = null,
+        locale: Locale? = configuration.locale
     ) {
         resultDispatcher.dispatch(
             call, result, callback, showDialog, callbackExecutor, presenter,
-            maxHeight ?: configuration.maxHeight, dialogOptions, cancelledByUser
+            maxHeight ?: configuration.maxHeight, dialogOptions, cancelledByUser, locale
         )
     }
 
@@ -267,10 +302,10 @@ class Zealot private constructor(context: Context) {
     fun showAlert(version: String, changelog: String, installUrl: String) {
         val settings = configuration
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
+            showAlertOnMain(version, changelog, installUrl, settings)
         } else {
             mainHandler.post {
-                showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
+                showAlertOnMain(version, changelog, installUrl, settings)
             }
         }
     }
@@ -279,11 +314,12 @@ class Zealot private constructor(context: Context) {
         version: String,
         changelog: String,
         installUrl: String,
-        maxHeight: ScreenHeight,
-        dialogOptions: UpdateDialogOptions
+        settings: Configuration
     ) {
         val activity = activityReference?.get() ?: return
-        DefaultUpdateDialog.show(activity, version, changelog, installUrl, maxHeight, dialogOptions)
+        DefaultUpdateDialog.show(
+            activity, version, changelog, installUrl, settings.maxHeight, settings.dialogOptions, settings.locale
+        )
     }
 
     private inline fun updateConfiguration(change: (Configuration) -> Configuration) {

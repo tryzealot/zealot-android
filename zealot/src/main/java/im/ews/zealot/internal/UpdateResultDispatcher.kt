@@ -9,6 +9,7 @@ import im.ews.zealot.UpdateResult
 import im.ews.zealot.Zealot
 import okhttp3.Call
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
@@ -28,7 +29,8 @@ internal class UpdateResultDispatcher(
         presenter: UpdatePresenter?,
         maxHeight: Zealot.ScreenHeight,
         dialogOptions: UpdateDialogOptions,
-        cancelledByUser: AtomicBoolean?
+        cancelledByUser: AtomicBoolean?,
+        locale: Locale?
     ) {
         fun isUserCancelled(): Boolean = cancelledByUser?.get() ?: call.isCanceled()
         if (showDialog && result is UpdateResult.UpdateAvailable) {
@@ -46,7 +48,8 @@ internal class UpdateResultDispatcher(
                         release.changelog,
                         release.installUrl,
                         maxHeight,
-                        dialogOptions
+                        dialogOptions,
+                        locale
                     )
                 }
             }

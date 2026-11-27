@@ -1,0 +1,17 @@
+<resources>
+  <string name="zealot_update_title">Neue Version %1$s</string>
+  <string name="zealot_update_later">Später</string>
+  <string name="zealot_update_now">Jetzt aktualisieren</string>
+  <string name="zealot_prompt_available">Update verfügbar</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">Was ist neu?</string>
+  <string name="zealot_prompt_hide_notes">Änderungen ausblenden</string>
+  <string name="zealot_prompt_open">Update öffnen</string>
+  <string name="zealot_prompt_open_failed">Der Link konnte nicht geöffnet werden. Versuche es erneut, sobald ein Browser verfügbar ist.</string>
+  <string name="zealot_prompt_checking">Suche nach Updates…</string>
+  <string name="zealot_prompt_current">Du hast die neueste Version</string>
+  <string name="zealot_prompt_check_failed">Updates konnten nicht geprüft werden</string>
+  <string name="zealot_prompt_check_hint">Prüfe deine Internetverbindung oder versuche es später erneut.</string>
+  <string name="zealot_prompt_retry">Erneut versuchen</string>
+  <string name="zealot_prompt_dismiss">Schließen</string>
+</resources>

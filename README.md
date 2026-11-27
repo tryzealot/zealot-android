@@ -200,7 +200,58 @@ Zealot.create(this)
 
 The same methods are callable from Java. Implement UpdateCallback with the three methods shown above, or use the fluent launch() API.
 
-## Check for updates when an Activity starts
+## Automatic update prompts
+
+`enableUpdatePrompts()` is available in the development version. Call it once
+from your main Activity after configuring the SDK. Zealot attaches to that
+Activity's lifecycle and shows a non-modal prompt when an update is available.
+
+~~~kotlin
+val updates = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .enableUpdatePrompts()
+
+findViewById<View>(R.id.check_for_updates).setOnClickListener {
+    updates.checkNow()
+}
+~~~
+
+The prompt shows the app icon, name and new version. Release notes expand
+inside the card when available. The animations follow Android's system setting.
+**Later** hides that build on this channel for the current app process.
+Returning from the background preserves the choice. A cold launch can show
+the update again. A manual check can show a deferred build and reports
+whether the app is up to date or the check failed. **Open update** hands the link
+to Android. When you return to the Activity, Zealot checks again and suppresses
+a repeat prompt for the build you just opened during that Activity's lifetime.
+
+The same API works from Java and from a Flutter app's Android Activity.
+Lifecycle handling and the light and dark prompt palettes are built in.
+Automatic checks run on the foreground Activity and may run again on a later
+resume after one hour. Its handle closes when the Activity is destroyed.
+Call `close()` to turn off prompts sooner or before attaching a different
+channel to the same Activity. Call these methods on the main thread.
+
+## Choose the SDK language
+
+Zealot's built-in dialog and automatic prompts follow the Activity's language
+preferences. The SDK provides English, Simplified Chinese, German, French and
+Russian. Android loads English resources if no supported language matches.
+
+Call `setLocale(Locale)` to override the language for one Zealot instance.
+Pass `null` to follow the Activity again. For example, use
+`zealot.setLocale(Locale.forLanguageTag("fr-FR"))` from Kotlin or Java.
+Set the locale before starting a check or calling `enableUpdatePrompts()`.
+To apply a new locale to automatic prompts, close the current handle and
+enable prompts again. The override leaves the app's language, custom button
+labels, and release notes supplied by your Zealot server as they are.
+
+If your app filters Android resources by language, include the SDK languages you
+want to display. The example app's language selector applies to its update
+prompt and leaves the rest of the screen in the app's language.
+
+## Manage the startup check yourself
 
 `createStartupCheck()` is available in the development version. Configure Zealot
 with the Activity and keep one helper per Activity instance. Call the helper
@@ -267,10 +318,9 @@ construction, response parsing, result delivery, and the optional dialog live in
 separate internal components, so non-UI checks do not depend on presentation.
 
 Use JDK 17 or newer to run the Gradle build. In the example app, enter a Zealot
-server URL and Android channel key, then tap **Check for update** to start the
-helper. Backgrounding the app cancels a pending check. Returning to the same
-Activity retries a cancelled or failed check. Its debug build permits HTTP
-for local server testing. Use HTTPS for a release build.
+server URL and Android channel key. Tap **Enable update prompts** to preview
+automatic prompts or **Check now** to run a manual check. The debug build
+permits HTTP for local server testing. Use HTTPS for a release build.
 
 Build the library and sample app:
 
@@ -319,7 +369,8 @@ adb -s <serial> shell am start -n im.ews.zealot.publicationsmoke/.ConsumerActivi
 
 The screen shows `Update available: 2.0`. Change `/available` to `/current` or
 `/error` to exercise the other outcomes. On an emulator running API 23 or newer,
-enter the same URL and key in the debug example app to test the startup helper.
+enter the same URL and key in the debug example app to test the automatic or
+manual prompt.
 
 To verify the live Zealot contract against a channel with at least two Android releases
 of the same app, set the endpoint and channel key for one local test run:

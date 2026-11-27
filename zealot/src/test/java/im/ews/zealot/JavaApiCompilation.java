@@ -4,6 +4,7 @@ import android.app.Activity;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 
+import java.util.Locale;
 import java.util.concurrent.Executor;
 
 /** Compiled with the unit tests to guard the public Java integration surface. */
@@ -13,6 +14,7 @@ final class JavaApiCompilation {
             .setEndpoint("https://zealot.example.com")
             .setChannelKey("channel", Zealot.BUILD_TYPE)
             .setBuildType(Zealot.BUILD_TYPE)
+            .setLocale(Locale.GERMAN)
             .setAlertMaxHeight(Zealot.ScreenHeight.HALFSCREEN)
             .setDialogOptions(new UpdateDialogOptions("Update available", "Install", "Later", true))
             .setHttpClient(client)

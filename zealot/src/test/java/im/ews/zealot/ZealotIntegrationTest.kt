@@ -26,6 +26,7 @@ import org.robolectric.annotation.LooperMode
 import org.robolectric.android.controller.ActivityController
 import org.robolectric.shadows.ShadowDialog
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
@@ -548,7 +549,33 @@ class ZealotIntegrationTest {
     }
 
     @Test
-    fun inFlightDialogKeepsItsOptionsSnapshot() {
+    @Config(sdk = [24, 34], qualifiers = "fr-rFR")
+    fun dialogLanguageCanBeOverriddenAndRestoredWithoutChangingTheActivity() {
+        val activity = activity()
+        val zealot = Zealot.create(activity)
+        val cases = listOf(
+            Locale.ENGLISH to "Later",
+            Locale.SIMPLIFIED_CHINESE to "下次再说",
+            Locale.forLanguageTag("zh-Hans") to "下次再说",
+            Locale.GERMANY to "Später",
+            Locale.FRANCE to "Plus tard",
+            Locale.forLanguageTag("ru-RU") to "Позже",
+            Locale.JAPAN to "Later",
+            null to "Plus tard"
+        )
+
+        for ((locale, later) in cases) {
+            zealot.setLocale(locale).showAlert("2.0", "Server release notes", "https://zealot.example.com/install")
+            val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+            assertEquals(locale?.toLanguageTag(), later, dialog.getButton(AlertDialog.BUTTON_NEGATIVE).text.toString())
+            assertEquals("Plus tard", activity.getString(R.string.zealot_update_later))
+            dialog.dismiss()
+            Shadows.shadowOf(Looper.getMainLooper()).idle()
+        }
+    }
+
+    @Test
+    fun inFlightDialogKeepsItsOptionsAndLocaleSnapshot() {
         val activity = activity()
         val requestStarted = CountDownLatch(1)
         val unblockRequest = CountDownLatch(1)
@@ -565,15 +592,19 @@ class ZealotIntegrationTest {
             .setHttpClient(client)
             .setCallbackExecutor(Executor { it.run() })
             .setDialogOptions(UpdateDialogOptions(updateButtonText = "First label"))
+            .setLocale(Locale.GERMAN)
 
         zealot.checkAndShowUpdate(UpdateResultCallback { callbackFinished.countDown() })
         assertTrue(requestStarted.await(5, TimeUnit.SECONDS))
         zealot.setDialogOptions(UpdateDialogOptions(updateButtonText = "Later label"))
+            .setLocale(Locale.FRENCH)
         unblockRequest.countDown()
         assertTrue(callbackFinished.await(5, TimeUnit.SECONDS))
         Shadows.shadowOf(Looper.getMainLooper()).idle()
 
         val dialog = ShadowDialog.getLatestDialog() as AlertDialog
+        assertEquals("Neue Version 2.0 (12)", Shadows.shadowOf(dialog).title)
+        assertEquals("Später", dialog.getButton(AlertDialog.BUTTON_NEGATIVE).text.toString())
         assertEquals("First label", dialog.getButton(AlertDialog.BUTTON_POSITIVE).text)
     }
 

@@ -5,6 +5,11 @@ for published versions.
 
 ## Unreleased
 
+- Localize the built-in update UI in English, Simplified Chinese, German,
+  French and Russian. Add `setLocale(Locale)` for a per-instance override.
+- Add one-call update prompts for an Activity. The non-modal card supports
+  light and dark themes, app branding, animated release notes, a session-only
+  Later action, and manual checks.
 - Add an opt-in update check that follows an Activity's resume and pause events.
   It retries on the next resume after an error or cancellation and stops after
   the first successful result.

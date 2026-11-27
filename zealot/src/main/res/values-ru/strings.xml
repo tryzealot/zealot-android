@@ -1,0 +1,17 @@
+<resources>
+  <string name="zealot_update_title">Новая версия %1$s</string>
+  <string name="zealot_update_later">Позже</string>
+  <string name="zealot_update_now">Обновить</string>
+  <string name="zealot_prompt_available">Доступно обновление</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">Что нового</string>
+  <string name="zealot_prompt_hide_notes">Скрыть список изменений</string>
+  <string name="zealot_prompt_open">Открыть обновление</string>
+  <string name="zealot_prompt_open_failed">Не удалось открыть ссылку. Повторите попытку, когда браузер будет доступен.</string>
+  <string name="zealot_prompt_checking">Проверяем обновления…</string>
+  <string name="zealot_prompt_current">У вас последняя версия</string>
+  <string name="zealot_prompt_check_failed">Не удалось проверить обновления</string>
+  <string name="zealot_prompt_check_hint">Проверьте подключение или попробуйте чуть позже.</string>
+  <string name="zealot_prompt_retry">Повторить</string>
+  <string name="zealot_prompt_dismiss">Закрыть</string>
+</resources>

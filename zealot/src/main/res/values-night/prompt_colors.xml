@@ -1,0 +1,10 @@
+<resources>
+  <color name="zealot_prompt_surface">#22272F</color>
+  <color name="zealot_prompt_outline">#414955</color>
+  <color name="zealot_prompt_notes_surface">#2C3440</color>
+  <color name="zealot_prompt_text">#EFF3F8</color>
+  <color name="zealot_prompt_secondary">#BBC6D6</color>
+  <color name="zealot_prompt_accent">#A8C7FF</color>
+  <color name="zealot_prompt_on_accent">#103566</color>
+  <color name="zealot_prompt_ripple">#4073A5FC</color>
+</resources>

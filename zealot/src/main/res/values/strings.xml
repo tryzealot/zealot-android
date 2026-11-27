@@ -3,4 +3,16 @@
   <string name="zealot_update_title">New version %1$s</string>
   <string name="zealot_update_later">Later</string>
   <string name="zealot_update_now">Update now</string>
+  <string name="zealot_prompt_available">Update available</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">What’s new</string>
+  <string name="zealot_prompt_hide_notes">Hide release notes</string>
+  <string name="zealot_prompt_open">Open update</string>
+  <string name="zealot_prompt_open_failed">Couldn’t open the link. Try again when a browser is available.</string>
+  <string name="zealot_prompt_checking">Checking for updates…</string>
+  <string name="zealot_prompt_current">You’re up to date</string>
+  <string name="zealot_prompt_check_failed">Couldn’t check for updates</string>
+  <string name="zealot_prompt_check_hint">Check your connection or try again in a moment.</string>
+  <string name="zealot_prompt_retry">Try again</string>
+  <string name="zealot_prompt_dismiss">Dismiss</string>
 </resources>
