@@ -8,6 +8,11 @@ import android.content.Intent
 import android.app.Activity
 import android.os.Looper
 import android.view.View
+import android.view.ViewGroup
+import android.widget.ScrollView
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.work.ListenableWorker.Result
 import androidx.work.testing.TestWorkerBuilder
 import androidx.work.workDataOf
@@ -133,6 +138,55 @@ class ApkUpdateTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle()
         assertFalse(sheet.isShowing)
         assertEquals(45, (dismissed as? UpdateNotice.Apk)?.status?.percent)
+        controller.pause().stop().destroy()
+    }
+
+    @Test
+    @Config(sdk = [30])
+    fun bottomSheetWrapsShortContentAndUsesAvailableHeightForLongNotes() {
+        val controller = Robolectric.buildActivity(Activity::class.java).setup()
+        val sheet = UpdatePromptSheet(controller.get(), null)
+        val insets = WindowInsetsCompat.Builder()
+            .setInsets(WindowInsetsCompat.Type.systemBars(), Insets.of(0, 24, 40, 32))
+            .setInsets(WindowInsetsCompat.Type.displayCutout(), Insets.of(48, 0, 0, 0))
+            .build()
+        fun layout(viewport: ViewGroup, height: Int) {
+            val exact = View.MeasureSpec.EXACTLY
+            viewport.measure(View.MeasureSpec.makeMeasureSpec(640, exact), View.MeasureSpec.makeMeasureSpec(height, exact))
+            viewport.layout(0, 0, 640, height)
+        }
+        fun render(notice: UpdateNotice): ScrollView {
+            sheet.render(notice, {}, {}, {}, {}, { _, _ -> }, {}, {})
+            val dialog = requireNotNull(ShadowDialog.getLatestDialog())
+            val body = requireNotNull(dialog.findViewById<View>(R.id.zealot_update_banner))
+            val notes = body.parent as ScrollView
+            val viewport = notes.parent.parent.parent as ViewGroup
+            ViewCompat.dispatchApplyWindowInsets(viewport, insets)
+            layout(viewport, 320)
+            return notes
+        }
+
+        val ready = ApkUpdateStatus(ApkUpdateStatus.Stage.READY)
+        val short = render(UpdateNotice.Apk(ready, null)).parent.parent as View
+        assertTrue(short.top > 24)
+        assertEquals(320, short.bottom)
+
+        val release = ReleaseInfo("2.0", "2", "https://example.org/update.apk", "Release note\n".repeat(50))
+        val notes = render(UpdateNotice.Available(release, download = true))
+        val panel = notes.parent.parent as View
+        assertEquals(0, panel.left)
+        assertEquals(640, panel.right)
+        assertEquals(24, panel.top)
+        assertEquals(320, panel.bottom)
+        assertEquals(48, panel.paddingLeft)
+        assertEquals(40, panel.paddingRight)
+        assertEquals(32, panel.paddingBottom)
+        val height = notes.height
+        assertTrue(notes.canScrollVertically(1))
+        layout(panel.parent as ViewGroup, 480)
+        assertEquals(24, panel.top)
+        assertTrue(notes.height > height)
+        sheet.hide()
         controller.pause().stop().destroy()
     }
 

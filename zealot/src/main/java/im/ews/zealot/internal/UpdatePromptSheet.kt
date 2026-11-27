@@ -16,6 +16,8 @@ import android.view.animation.PathInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import androidx.core.graphics.ColorUtils
+import androidx.core.graphics.Insets
 import androidx.core.view.OneShotPreDrawListener
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
@@ -25,7 +27,6 @@ import im.ews.zealot.ReleaseInfo
 import im.ews.zealot.internal.apk.ApkUpdateStatus
 import java.lang.ref.WeakReference
 import java.util.Locale
-import kotlin.math.roundToInt
 
 internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?, private val theme: Int = 0) {
     private val owner = WeakReference(activity)
@@ -36,6 +37,7 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
     private var content: BannerContent? = null
     private var shown: UpdateNotice? = null
     private var closing = false
+    private var safeInsets = Insets.NONE
 
     // The Activity loses window focus while the sheet is open, including during its exit.
     val isShowing: Boolean get() = dialog?.isShowing == true
@@ -66,7 +68,8 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
             setUpdateLocale(locale)
             populate(notice, open, later, retry, dismiss, transferAction, minimize = minimize)
         }
-        val newPanel = SheetLayout(activity, body, colors.color(R.color.zealot_prompt_surface))
+        val surface = colors.color(R.color.zealot_prompt_surface)
+        val newPanel = SheetLayout(activity, body, surface)
         val previous = panel
         val restoring = closing || previous?.isLaidOut != true || scrim?.alpha == 0f
         closing = false
@@ -101,7 +104,7 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
                 }
             }.also { root.addView(it, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT)) }
             next.setContentView(root)
-            next.window?.let { configureWindow(it, activity.window) }
+            next.window?.let { configureWindow(it, activity.window, surface) }
             dialog = next
             updatePanel(previous, newPanel)
             next.show()
@@ -132,9 +135,10 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
     }
 
     private fun applySafeInsets(view: View, insets: WindowInsetsCompat) {
-        val safe = insets.getInsets(WindowInsetsCompat.Type.systemBars() or
+        safeInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars() or
             WindowInsetsCompat.Type.displayCutout() or WindowInsetsCompat.Type.ime())
-        view.setPadding(safe.left, safe.top, safe.right, safe.bottom)
+        view.setPadding(0, safeInsets.top, 0, 0)
+        panel?.applyContentInsets(safeInsets)
     }
 
     fun hide(animated: Boolean = false) {
@@ -162,12 +166,14 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
         panel = null
         scrim = null
         viewport = null
+        safeInsets = Insets.NONE
         current.dismiss()
     }
 
     private fun updatePanel(previous: SheetLayout?, next: SheetLayout) {
         viewport?.apply {
             if (previous != null) removeView(previous)
+            next.applyContentInsets(safeInsets)
             addView(next, FrameLayout.LayoutParams(
                 MATCH_PARENT, WRAP_CONTENT, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
             ))
@@ -175,12 +181,16 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
     }
 
     @Suppress("DEPRECATION")
-    private fun configureWindow(window: Window, ownerWindow: Window) {
+    private fun configureWindow(window: Window, ownerWindow: Window, surface: Int) {
         WindowCompat.setDecorFitsSystemWindows(window, false)
         window.setBackgroundDrawableResource(android.R.color.transparent)
         window.setWindowAnimations(0)
         window.statusBarColor = Color.TRANSPARENT
-        window.navigationBarColor = Color.TRANSPARENT
+        // Dark icons have higher contrast against colors above this luminance.
+        val lightSurface = ColorUtils.calculateLuminance(surface) > 0.179
+        // Android 5–7.1 only supports light navigation icons.
+        window.navigationBarColor = if (Build.VERSION.SDK_INT < 26 && lightSurface) 0x80000000.toInt()
+        else Color.TRANSPARENT
         if (Build.VERSION.SDK_INT >= 29) {
             window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
@@ -196,7 +206,7 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
         val original = WindowCompat.getInsetsController(ownerWindow, ownerWindow.decorView)
         WindowCompat.getInsetsController(window, window.decorView).apply {
             isAppearanceLightStatusBars = original.isAppearanceLightStatusBars
-            isAppearanceLightNavigationBars = original.isAppearanceLightNavigationBars
+            isAppearanceLightNavigationBars = lightSurface
         }
     }
 
@@ -209,6 +219,7 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
 private class SheetLayout(context: Activity, private val body: BannerContent, surface: Int) : ScrollView(context) {
     private val notesViewport = NotesViewport(context)
     private val actions = body.sheetActions
+    private var contentInsets = Insets.NONE
 
     init {
         isClickable = true
@@ -229,18 +240,37 @@ private class SheetLayout(context: Activity, private val body: BannerContent, su
         addView(column, LayoutParams(MATCH_PARENT, WRAP_CONTENT))
     }
 
+    fun applyContentInsets(insets: Insets) {
+        if (contentInsets == insets) return
+        contentInsets = insets
+        requestLayout()
+    }
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        val safeHeight = MeasureSpec.getSize(heightMeasureSpec)
-        val width = minOf(MeasureSpec.getSize(widthMeasureSpec), body.dp(560))
+        val windowWidth = MeasureSpec.getSize(widthMeasureSpec)
+        val windowHeight = MeasureSpec.getSize(heightMeasureSpec)
+        val maxWidth = body.dp(560)
+        // Use the full surface if centering a capped sheet would leave a gap at a system edge.
+        val spansWindow = windowWidth <= maxWidth + 2 * maxOf(contentInsets.left, contentInsets.right)
+        val width = if (spansWindow) windowWidth else maxWidth
+        val left = if (spansWindow) contentInsets.left else 0
+        val right = if (spansWindow) contentInsets.right else 0
+        val bottom = contentInsets.bottom.coerceAtMost(windowHeight)
+        if (paddingLeft != left || paddingRight != right || paddingBottom != bottom) {
+            setPadding(left, 0, right, bottom)
+        }
+        val contentWidth = (width - left - right).coerceAtLeast(0)
+        val safeHeight = windowHeight - bottom
         val widthSpec = MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY)
-        body.fitActions(width)
-        actions?.measure(widthSpec, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
-        val footerHeight = actions?.measuredHeight ?: 0
-        val minHeightWithFooter = footerHeight + body.dp(72)
-        val height = maxOf((safeHeight * 0.8f).roundToInt(), minHeightWithFooter).coerceAtMost(safeHeight)
+        body.fitActions(contentWidth)
+        actions?.measure(
+            MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.EXACTLY),
+            MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
+        )
+        val notesHeight = safeHeight - (actions?.measuredHeight ?: 0)
         // In a very short window, scroll the whole sheet so both the notes and buttons stay reachable.
-        notesViewport.heightLimit = if (height >= minHeightWithFooter) height - footerHeight else null
-        super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.AT_MOST))
+        notesViewport.heightLimit = notesHeight.takeIf { it >= body.dp(72) }
+        super.onMeasure(widthSpec, MeasureSpec.makeMeasureSpec(windowHeight, MeasureSpec.AT_MOST))
     }
 
     override fun onInterceptTouchEvent(event: MotionEvent): Boolean =
@@ -252,6 +282,11 @@ private class SheetLayout(context: Activity, private val body: BannerContent, su
 
 private class NotesViewport(context: Activity) : ScrollView(context) {
     var heightLimit: Int? = null
+        set(value) {
+            if (field == value) return
+            field = value
+            requestLayout()
+        }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val height = heightLimit?.let { MeasureSpec.makeMeasureSpec(it, MeasureSpec.AT_MOST) } ?: heightMeasureSpec
