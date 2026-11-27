@@ -1,10 +1,10 @@
 <resources>
-  <color name="zealot_prompt_surface">#22272F</color>
-  <color name="zealot_prompt_outline">#414955</color>
-  <color name="zealot_prompt_notes_surface">#2C3440</color>
-  <color name="zealot_prompt_text">#EFF3F8</color>
-  <color name="zealot_prompt_secondary">#BBC6D6</color>
-  <color name="zealot_prompt_accent">#A8C7FF</color>
-  <color name="zealot_prompt_on_accent">#103566</color>
-  <color name="zealot_prompt_ripple">#4073A5FC</color>
+  <color name="zealot_prompt_surface">#23272F</color>
+  <color name="zealot_prompt_outline">#465060</color>
+  <color name="zealot_prompt_notes_surface">#2E343F</color>
+  <color name="zealot_prompt_text">#EEF1F8</color>
+  <color name="zealot_prompt_secondary">#C2CAD8</color>
+  <color name="zealot_prompt_accent">#AFC9F7</color>
+  <color name="zealot_prompt_on_accent">#142D53</color>
+  <color name="zealot_prompt_ripple">#3090ADD5</color>
 </resources>

@@ -3,6 +3,7 @@ package im.ews.zealot.internal
 import android.app.Activity
 import android.app.Dialog
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.view.Gravity
@@ -28,7 +29,12 @@ import im.ews.zealot.internal.apk.ApkUpdateStatus
 import java.lang.ref.WeakReference
 import java.util.Locale
 
-internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?, private val theme: Int = 0) {
+internal class UpdatePromptSheet(
+    activity: Activity,
+    private val locale: Locale?,
+    private val theme: Int = 0,
+    private val typeface: Typeface? = null
+) {
     private val owner = WeakReference(activity)
     private var dialog: Dialog? = null
     private var viewport: FrameLayout? = null
@@ -64,7 +70,7 @@ internal class UpdatePromptSheet(activity: Activity, private val locale: Locale?
         val activity = owner.get() ?: return
         if (activity.isFinishing || activity.isDestroyed) return
         val colors = UpdateSheetColors(activity, theme)
-        val body = BannerContent(activity, colors).apply {
+        val body = BannerContent(activity, colors, typeface).apply {
             setUpdateLocale(locale)
             populate(notice, open, later, retry, dismiss, transferAction, minimize = minimize)
         }

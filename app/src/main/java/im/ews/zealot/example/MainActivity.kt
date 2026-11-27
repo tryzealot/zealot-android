@@ -2,6 +2,7 @@ package im.ews.zealot.example
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Typeface
 import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
@@ -20,7 +21,13 @@ import im.ews.zealot.Zealot
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private data class PromptSettings(val endpoint: String, val key: String, val locale: Locale?, val sheetTheme: Int)
+    private data class PromptSettings(
+        val endpoint: String,
+        val key: String,
+        val locale: Locale?,
+        val sheetTheme: Int,
+        val sheetTypeface: Typeface?
+    )
 
     private var prompts: UpdatePrompts? = null
     private var activeSettings: PromptSettings? = null
@@ -81,7 +88,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<ScrollView>(R.id.sample_root).requestFocus()
         val locale = languages.getOrNull(findViewById<Spinner>(R.id.prompt_locale).selectedItemPosition)?.second
         val sheetTheme = if (findViewById<CheckBox>(R.id.custom_sheet_colors).isChecked) R.style.SampleUpdateSheet else 0
-        val settings = PromptSettings(serverUrl, key, locale, sheetTheme)
+        val sheetTypeface = Typeface.SERIF.takeIf { findViewById<CheckBox>(R.id.custom_sheet_typeface).isChecked }
+        val settings = PromptSettings(serverUrl, key, locale, sheetTheme, sheetTypeface)
         if (activeSettings == settings) return prompts
 
         val client = try {
@@ -91,6 +99,7 @@ class MainActivity : AppCompatActivity() {
                 .setBuildType(BuildConfig.BUILD_TYPE)
                 .setLocale(locale)
                 .setUpdateSheetTheme(sheetTheme)
+                .setUpdateSheetTypeface(sheetTypeface)
         } catch (error: IllegalArgumentException) {
             status.text = error.message
             return null

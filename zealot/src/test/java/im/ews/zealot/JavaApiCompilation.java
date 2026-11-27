@@ -1,6 +1,7 @@
 package im.ews.zealot;
 
 import android.app.Activity;
+import android.graphics.Typeface;
 import okhttp3.Call;
 import okhttp3.OkHttpClient;
 
@@ -15,6 +16,8 @@ final class JavaApiCompilation {
             .setChannelKey("channel", Zealot.BUILD_TYPE)
             .setBuildType(Zealot.BUILD_TYPE)
             .setLocale(Locale.GERMAN)
+            .setUpdateSheetFont(0)
+            .setUpdateSheetTypeface(Typeface.SERIF)
             .setAlertMaxHeight(Zealot.ScreenHeight.HALFSCREEN)
             .setDialogOptions(new UpdateDialogOptions("Update available", "Install", "Later", true))
             .setHttpClient(client)

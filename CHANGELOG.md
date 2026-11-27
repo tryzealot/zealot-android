@@ -5,7 +5,7 @@ for published versions.
 
 ## Unreleased
 
-- Let apps personalize the in-app update sheet with an Android theme overlay.
+- Let apps personalize the in-app update sheet with an Android color overlay and a custom typeface.
 - Keep the update sheet inside system insets and make long release notes fully scrollable.
 
 - Add optional in-app APK download and installation for Zealot-distributed

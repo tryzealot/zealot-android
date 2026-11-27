@@ -2,6 +2,7 @@ package im.ews.zealot
 
 import android.app.Activity
 import android.app.Application
+import android.graphics.Typeface
 import android.os.Bundle
 import android.os.Looper
 import android.os.SystemClock
@@ -27,6 +28,7 @@ class UpdatePrompts private constructor(
     locale: Locale?,
     downloadUpdates: Boolean,
     sheetTheme: Int,
+    sheetTypeface: Typeface?,
     private val startCheck: (UpdateResultCallback) -> Call
 ) : AutoCloseable {
     private data class Channel(val endpoint: HttpUrl, val key: String)
@@ -45,6 +47,7 @@ class UpdatePrompts private constructor(
             locale: Locale?,
             downloadUpdates: Boolean,
             sheetTheme: Int,
+            sheetTypeface: Typeface?,
             startCheck: (UpdateResultCallback) -> Call
         ): UpdatePrompts {
             check(!activity.isFinishing && !activity.isDestroyed) { "update prompts require a live Activity" }
@@ -52,7 +55,7 @@ class UpdatePrompts private constructor(
             (window.getTag(R.id.zealot_update_prompts) as? UpdatePrompts)?.let { return it }
 
             val prompts = UpdatePrompts(
-                activity, Channel(endpoint, channelKey), locale, downloadUpdates, sheetTheme, startCheck
+                activity, Channel(endpoint, channelKey), locale, downloadUpdates, sheetTheme, sheetTypeface, startCheck
             )
             window.setTag(R.id.zealot_update_prompts, prompts)
             activity.application.registerActivityLifecycleCallbacks(prompts.lifecycle)
@@ -81,7 +84,7 @@ class UpdatePrompts private constructor(
     private val apkUpdates = if (downloadUpdates && ApkUpdates.supported(activity)) {
         ApkUpdates(application, channel.endpoint, channel.key, locale, ::refresh)
     } else null
-    private val sheet = apkUpdates?.let { UpdatePromptSheet(activity, locale, sheetTheme) }
+    private val sheet = apkUpdates?.let { UpdatePromptSheet(activity, locale, sheetTheme, sheetTypeface) }
 
     private val focusListener = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus ->
         focused = hasFocus

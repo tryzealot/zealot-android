@@ -317,6 +317,25 @@ use the same setter. Pass `0` to restore all defaults before attaching prompts.
 The overlay applies to the in-app sheet. The compact status, standalone update
 dialog and system installer have their own appearance.
 
+### Customize the update sheet font
+
+Put `brand_font.ttf` in your app's `res/font` directory and pass its resource
+ID before enabling prompts.
+
+~~~kotlin
+val updates = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setUpdateSheetFont(R.font.brand_font)
+    .enableUpdatePrompts(downloadUpdates = true)
+~~~
+
+If the app already has a `Typeface`, use `setUpdateSheetTypeface(typeface)`.
+Both setters work in Java and can be combined with `setUpdateSheetTheme()`.
+Use `setUpdateSheetFont(0)` or `setUpdateSheetTypeface(null)` to restore the
+default font. The sheet uses the supplied family for headings, supporting
+text, release notes, buttons and the download percentage.
+
 ## Choose the SDK language
 
 Zealot's built-in dialog and automatic prompts follow the Activity's language

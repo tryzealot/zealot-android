@@ -9,7 +9,10 @@ import android.content.res.ColorStateList
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.InsetDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.RippleDrawable
+import android.graphics.drawable.ScaleDrawable
 import android.os.Build
 import android.text.BidiFormatter
 import android.text.TextUtils
@@ -141,8 +144,18 @@ internal class UpdatePromptBanner(activity: Activity, private val locale: Locale
     }
 }
 
-internal class BannerContent(context: Context, private val sheetColors: UpdateSheetColors? = null) : LinearLayout(context) {
+internal class BannerContent(
+    context: Context,
+    private val sheetColors: UpdateSheetColors? = null,
+    private val sheetTypeface: Typeface? = null
+) : LinearLayout(context) {
     private val isSheet = sheetColors != null
+    private val emphasizedTypeface = when {
+        sheetTypeface == null -> Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        Build.VERSION.SDK_INT >= 28 -> Typeface.create(sheetTypeface, 500, sheetTypeface.isItalic)
+        sheetTypeface.isItalic -> Typeface.create(sheetTypeface, Typeface.BOLD_ITALIC)
+        else -> Typeface.create(sheetTypeface, Typeface.BOLD)
+    }
     private val actionRow = LinearLayout(context).apply { gravity = Gravity.END }
     val sheetActions: View? get() = actionRow.takeIf { isSheet && it.childCount > 0 }
     private var strings = context
@@ -161,7 +174,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
         id = R.id.zealot_update_banner
         orientation = VERTICAL
         val inset = dp(if (isSheet) 24 else 16)
-        setPadding(inset, inset, inset, dp(12))
+        setPadding(inset, dp(if (isSheet) 20 else 16), inset, dp(if (isSheet) 8 else 12))
         if (!isSheet) {
             background = shape(color(R.color.zealot_prompt_surface), 24).apply {
                 setStroke(dp(1), color(R.color.zealot_prompt_outline))
@@ -248,7 +261,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }
-            val size = dp(if (isSheet) 52 else 44)
+            val size = dp(if (isSheet) 48 else 44)
             row.addView(icon, LayoutParams(size, size).apply { marginEnd = dp(12) })
         }
         val labels = LinearLayout(context).apply {
@@ -257,7 +270,10 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
             val bidi = BidiFormatter.getInstance(strings.resources.configuration.layoutDirection == View.LAYOUT_DIRECTION_RTL)
             val appName = bidi.unicodeWrap(info.loadLabel(context.packageManager).toString())
             val version = bidi.unicodeWrap(release.releaseVersion)
-            addView(body(strings.getString(R.string.zealot_prompt_app_version, appName, version), lines = 2))
+            addView(body(strings.getString(R.string.zealot_prompt_app_version, appName, version), lines = 2),
+                LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                    if (isSheet) topMargin = dp(2)
+                })
         }
         row.addView(labels, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
@@ -266,20 +282,21 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
     private fun sheetNotes(changelog: String) {
         val panel = LinearLayout(context).apply {
             orientation = VERTICAL
-            background = shape(color(R.color.zealot_prompt_notes_surface), 16)
-            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = shape(color(R.color.zealot_prompt_notes_surface), 20)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
             addView(body(strings.getText(R.string.zealot_prompt_notes)).apply {
-                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                textSize = 16f
+                typeface = emphasizedTypeface
                 setTextColor(color(R.color.zealot_prompt_text))
+                if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true
             })
             addView(body(changelog).apply {
                 ellipsize = null
                 setLineSpacing(dp(3).toFloat(), 1f)
-            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
         }
         addView(panel, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-            topMargin = dp(20)
-            bottomMargin = dp(8)
+            topMargin = dp(16)
         })
     }
 
@@ -353,6 +370,12 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
                     if (status.stage == Stage.DOWNLOADING) {
                         percentLabel = body("", lines = 1).apply {
                             importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+                            if (isSheet) {
+                                fontFeatureSettings = "'tnum'"
+                                typeface = emphasizedTypeface
+                                minWidth = paint.measureText(percentFormat.format(1.0)).roundToInt()
+                                gravity = Gravity.END
+                            }
                             addView(this, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
                                 marginStart = dp(12)
                             })
@@ -362,10 +385,20 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
                 addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
                 downloadProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
                     progressTintList = ColorStateList.valueOf(color(R.color.zealot_prompt_accent))
-                    if (isSheet) progressBackgroundTintList = ColorStateList.valueOf(color(R.color.zealot_prompt_outline))
                     indeterminateTintList = progressTintList
-                    addView(this, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
-                        topMargin = dp(8)
+                    if (isSheet) {
+                        progressDrawable = LayerDrawable(arrayOf(
+                            shape(color(R.color.zealot_prompt_outline), 3),
+                            ScaleDrawable(shape(color(R.color.zealot_prompt_accent), 3), Gravity.START, 1f, 0f)
+                        )).apply {
+                            setId(0, android.R.id.background)
+                            setId(1, android.R.id.progress)
+                        }
+                    }
+                    addView(this, LayoutParams(
+                        LayoutParams.MATCH_PARENT, if (isSheet) dp(6) else LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        topMargin = dp(if (isSheet) 12 else 8)
                     })
                 }
                 setDownloadProgress(status.percent)
@@ -430,18 +463,22 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
             text = strings.getText(label)
             isAllCaps = false
             textSize = 14f
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            typeface = emphasizedTypeface
             minHeight = dp(48)
             minimumHeight = dp(48)
             minWidth = dp(48)
             minimumWidth = dp(48)
-            setPadding(dp(14), 0, dp(14), 0)
             setTextColor(color(if (primary) R.color.zealot_prompt_on_accent else R.color.zealot_prompt_accent))
-            background = RippleDrawable(
+            val radius = if (isSheet) 1000 else 24
+            val ripple = RippleDrawable(
                 ColorStateList.valueOf(color(R.color.zealot_prompt_ripple)),
-                shape(if (primary) color(R.color.zealot_prompt_accent) else 0, 24),
-                shape(color(R.color.zealot_prompt_surface), 24)
+                shape(if (primary) color(R.color.zealot_prompt_accent) else 0, radius),
+                shape(color(R.color.zealot_prompt_surface), radius)
             )
+            background = if (isSheet) InsetDrawable(ripple, 0, dp(4), 0, dp(4)) else ripple
+            val horizontal = dp(if (isSheet) 20 else 14)
+            val vertical = dp(if (isSheet) 8 else 0)
+            setPadding(horizontal, vertical, horizontal, vertical)
             stateListAnimator = null
             setOnClickListener { if (active) action() }
         }
@@ -449,7 +486,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
     fun actions(vararg buttons: Button) {
         buttons.forEachIndexed { index, button ->
             actionRow.addView(button, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
-                if (index > 0) marginStart = dp(4)
+                if (index > 0) marginStart = actionSpacing
             })
         }
         if (isSheet) actionRow.setPadding(paddingLeft, dp(4), paddingRight, dp(16))
@@ -462,7 +499,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
         val total = (0 until actionRow.childCount).sumOf { index ->
             val button = actionRow.getChildAt(index)
             button.measure(unconstrained, unconstrained)
-            button.measuredWidth + if (index > 0) dp(4) else 0
+            button.measuredWidth + if (index > 0) actionSpacing else 0
         }
         val stacked = total > available
         if (stacked == (actionRow.orientation == VERTICAL)) return
@@ -471,10 +508,12 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
             val button = actionRow.getChildAt(index)
             button.layoutParams = (button.layoutParams as LayoutParams).apply {
                 this.width = if (stacked && isSheet) LayoutParams.MATCH_PARENT else LayoutParams.WRAP_CONTENT
-                marginStart = if (!stacked && index > 0) dp(4) else 0
+                marginStart = if (!stacked && index > 0) actionSpacing else 0
             }
         }
     }
+
+    private val actionSpacing get() = dp(if (isSheet) 8 else 4)
 
     fun dp(value: Int): Int = (resources.displayMetrics.density * value).roundToInt()
 
@@ -491,7 +530,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
     private fun heading(label: Int) = TextView(context).apply {
         text = strings.getText(label)
         textSize = if (isSheet) 22f else 18f
-        typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+        typeface = emphasizedTypeface
         setTextColor(color(R.color.zealot_prompt_text))
         accessibilityLiveRegion = ACCESSIBILITY_LIVE_REGION_POLITE
         if (Build.VERSION.SDK_INT >= 28) isAccessibilityHeading = true
@@ -500,6 +539,7 @@ internal class BannerContent(context: Context, private val sheetColors: UpdateSh
     private fun body(value: CharSequence, lines: Int = Int.MAX_VALUE) = TextView(context).apply {
         text = value
         textSize = 14f
+        sheetTypeface?.let { typeface = it }
         setTextColor(color(R.color.zealot_prompt_secondary))
         maxLines = lines
         ellipsize = TextUtils.TruncateAt.END

@@ -4,10 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.FontRes
 import androidx.annotation.StyleRes
+import androidx.core.content.res.ResourcesCompat
 import im.ews.zealot.internal.DefaultUpdateDialog
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.UpdateRequestFactory
@@ -57,7 +60,8 @@ class Zealot private constructor(context: Context) {
         val callbackExecutor: Executor? = null,
         val dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
         val locale: Locale? = null,
-        val updateSheetTheme: Int = 0
+        val updateSheetTheme: Int = 0,
+        val updateSheetTypeface: Typeface? = null
     )
 
     private val applicationContext = context.applicationContext ?: context
@@ -131,6 +135,19 @@ class Zealot private constructor(context: Context) {
     }
 
     /**
+     * Sets the typeface for the in-app update sheet independently of its color theme.
+     * Set it before attaching prompts. Pass null to restore the default typography.
+     */
+    fun setUpdateSheetTypeface(typeface: Typeface?): Zealot {
+        updateConfiguration { it.copy(updateSheetTypeface = typeface) }
+        return this
+    }
+
+    /** Loads the sheet's typeface from a bundled font resource. Pass 0 to restore the default. */
+    fun setUpdateSheetFont(@FontRes font: Int): Zealot =
+        setUpdateSheetTypeface(if (font == 0) null else ResourcesCompat.getFont(applicationContext, font))
+
+    /**
      * Sets the language of Zealot's built-in UI. Pass null to follow the Activity's language.
      * Set this before starting a check or attaching automatic prompts.
      */
@@ -195,7 +212,8 @@ class Zealot private constructor(context: Context) {
         val endpoint = settings.requireEndpoint()
         val channelKey = settings.requireChannelKey()
         return UpdatePrompts.attach(
-            activity, endpoint, channelKey, settings.locale, downloadUpdates, settings.updateSheetTheme
+            activity, endpoint, channelKey, settings.locale, downloadUpdates,
+            settings.updateSheetTheme, settings.updateSheetTypeface
         ) { callback ->
             startCheck(callback.asUpdateCallback(), showDialog = false, deliverOnMain = true, settings = settings)
         }

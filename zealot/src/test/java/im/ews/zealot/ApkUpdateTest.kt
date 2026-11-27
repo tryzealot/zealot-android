@@ -6,10 +6,13 @@ import android.content.pm.Signature
 import android.content.Context
 import android.content.Intent
 import android.app.Activity
+import android.graphics.Typeface
+import android.os.Build
 import android.os.Looper
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ScrollView
+import android.widget.TextView
 import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -186,6 +189,31 @@ class ApkUpdateTest {
         layout(panel.parent as ViewGroup, 480)
         assertEquals(24, panel.top)
         assertTrue(notes.height > height)
+        sheet.hide()
+        controller.pause().stop().destroy()
+    }
+
+    @Test
+    @Config(sdk = [24, 30])
+    fun bottomSheetAppliesTheCustomTypefaceToBothTextRoles() {
+        val controller = Robolectric.buildActivity(Activity::class.java).setup()
+        val activity = controller.get()
+        val font = Typeface.SERIF
+        val emphasized = if (Build.VERSION.SDK_INT >= 28) Typeface.create(font, 500, false)
+        else Typeface.create(font, Typeface.BOLD)
+        val sheet = UpdatePromptSheet(activity, null, typeface = font)
+        val release = ReleaseInfo("2.0", "2", "https://example.org/update.apk", "Preview the new release")
+        sheet.render(UpdateNotice.Available(release, download = true), {}, {}, {}, {}, { _, _ -> }, {}, {})
+        val window = requireNotNull(ShadowDialog.getLatestDialog().window)
+        fun fontOf(label: String): Typeface {
+            val matches = arrayListOf<View>()
+            window.decorView.findViewsWithText(matches, label, View.FIND_VIEWS_WITH_TEXT)
+            return matches.filterIsInstance<TextView>().single { it.text.toString() == label }.typeface
+        }
+        assertEquals(font, fontOf(release.changelog))
+        assertEquals(emphasized, fontOf(activity.getString(R.string.zealot_prompt_available)))
+        assertEquals(emphasized, fontOf(activity.getString(R.string.zealot_prompt_notes)))
+        assertEquals(emphasized, fontOf(activity.getString(R.string.zealot_apk_download)))
         sheet.hide()
         controller.pause().stop().destroy()
     }
