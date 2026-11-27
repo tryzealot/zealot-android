@@ -5,6 +5,12 @@ for published versions.
 
 ## Unreleased
 
+- Let apps personalize the in-app update sheet with an Android theme overlay.
+- Keep the update sheet inside system insets and make long release notes fully scrollable.
+
+- Add optional in-app APK download and installation for Zealot-distributed
+  builds, with WorkManager, a minimizable bottom sheet, notification progress, APK
+  verification, cancellation and restart recovery.
 - Localize the built-in update UI in English, Simplified Chinese, German,
   French and Russian. Add `setLocale(Locale)` for a per-instance override.
 - Add one-call update prompts for an Activity. The non-modal card supports

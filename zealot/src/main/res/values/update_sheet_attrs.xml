@@ -1,0 +1,10 @@
+<resources>
+    <attr name="zealotSheetSurface" format="color" />
+    <attr name="zealotSheetNotesSurface" format="color" />
+    <attr name="zealotSheetOnSurface" format="color" />
+    <attr name="zealotSheetOnSurfaceVariant" format="color" />
+    <attr name="zealotSheetAccent" format="color" />
+    <attr name="zealotSheetOnAccent" format="color" />
+    <attr name="zealotSheetProgressTrack" format="color" />
+    <attr name="zealotSheetRipple" format="color" />
+</resources>

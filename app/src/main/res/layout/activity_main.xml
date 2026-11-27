@@ -68,6 +68,14 @@
       android:layout_height="wrap_content"
       android:minHeight="48dp" />
 
+    <CheckBox
+      android:id="@+id/custom_sheet_colors"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="12dp"
+      android:minHeight="48dp"
+      android:text="@string/custom_sheet_colors" />
+
     <Button
       android:id="@+id/enable_prompts"
       android:layout_width="match_parent"

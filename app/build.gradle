@@ -13,7 +13,7 @@ android {
     defaultConfig {
         minSdk = 23
         targetSdk = 37
-        versionCode = 1
+        versionCode = providers.gradleProperty('sampleVersionCode').map { it.toInteger() }.getOrElse(1)
         versionName = "1.0"
 
         applicationId = "im.ews.zealot.example"

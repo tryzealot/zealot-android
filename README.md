@@ -1,6 +1,6 @@
 # Zealot Android SDK
 
-Android SDK for checking newer releases on a Zealot channel and opening the release page for installation. The SDK supports Kotlin and Java.
+Android SDK for checking newer releases on a Zealot channel, opening the release page, and optionally downloading APK updates in the background. The SDK supports Kotlin and Java.
 
 ## Requirements
 
@@ -153,7 +153,7 @@ If the screen owns the check, use `checkAndShowUpdate()` to keep its cancellable
 `Call` and cancel it when the screen closes. This UI-only overload needs no callback.
 The legacy `launch()` remains available for existing callers.
 
-The dialog opens Zealot's install_url with an Android ACTION_VIEW intent. The SDK does not download or install APK files itself. Repeated results do not stack multiple built-in dialogs on the same screen, and the dialog closes when the Activity window detaches. Calls created with an application context can check releases through checkForUpdate, but cannot show the built-in dialog.
+The dialog opens Zealot's `install_url` with an Android `ACTION_VIEW` intent. For background downloads and installation, use [automatic prompts with APK updates enabled](#download-updates-inside-the-app). Repeated results do not stack multiple built-in dialogs on the same screen, and the dialog closes when the Activity window detaches. Calls created with an application context can check releases through `checkForUpdate`, but cannot show the built-in dialog.
 
 For small changes to the built-in dialog, set `UpdateDialogOptions` before checking.
 Omitted text uses the localized library strings. Setting `cancelable = false`
@@ -232,6 +232,90 @@ Automatic checks run on the foreground Activity and may run again on a later
 resume after one hour. Its handle closes when the Activity is destroyed.
 Call `close()` to turn off prompts sooner or before attaching a different
 channel to the same Activity. Call these methods on the main thread.
+
+## Download updates inside the app
+
+Enable background APK updates in a build distributed through Zealot:
+
+~~~kotlin
+val updates = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .enableUpdatePrompts(downloadUpdates = true)
+~~~
+
+Declare the installation permission in that build's manifest:
+
+~~~xml
+<uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+~~~
+
+Use a channel serving a signed universal APK of up to 512 MiB over HTTPS. The
+**Download** action queues one WorkManager job per channel. The update sheet
+shows progress and lets you cancel or choose **Continue in background**. The
+compact update action reopens the sheet and changes to **Update ready to install**
+when verification finishes. Back and tapping outside during a download also
+minimize the sheet. From **Update available**, **Later**, Back, and
+tapping outside the sheet defer that release for the current app session.
+Zealot verifies the package, signing certificate and newer build number before
+offering **Install**.
+The ready file can be used after an app restart for up to seven days. Android
+may require permission for this installation source and will ask for confirmation.
+If the card shows **Allow installation**, use it to open Android settings.
+Allow the source, return to the app, and tap **Install**.
+The SDK continues to use the release link on channels that require browser login.
+Builds distributed through Google Play must use Google's update mechanism.
+
+To show download progress in the notification shade on Android 13 and later,
+declare `POST_NOTIFICATIONS` and obtain the user's permission in your
+application. The in-app progress and cancel action also work when notifications
+are disabled.
+
+`enableUpdatePrompts()` retains the link-based behavior. The library
+uses WorkManager 2.10.5 to support Android 21. If the app configures
+WorkManager manually, install its configuration before enabling APK updates.
+To test the in-app path with the debug sample, assemble two versions using
+`./gradlew :app:assembleDebug -PsampleVersionCode=1` and
+`./gradlew :app:assembleDebug -PsampleVersionCode=2`. Serve the second APK from
+an HTTPS Zealot channel and run the first on an emulator.
+
+### Customize the update sheet colors
+
+Define an Android style in the app's resources and pass it before attaching
+in-app update prompts.
+
+~~~xml
+<style name="AppUpdateSheet">
+    <item name="zealotSheetAccent">@color/update_accent</item>
+    <item name="zealotSheetOnAccent">@color/update_on_accent</item>
+    <item name="zealotSheetNotesSurface">@color/update_notes_surface</item>
+</style>
+~~~
+
+~~~kotlin
+val updates = Zealot.create(this)
+    .setEndpoint("https://zealot.example.com")
+    .setChannelKey("your-channel-key")
+    .setUpdateSheetTheme(R.style.AppUpdateSheet)
+    .enableUpdatePrompts(downloadUpdates = true)
+~~~
+
+| Attribute | Applies to |
+| --- | --- |
+| `zealotSheetSurface` | Panel background |
+| `zealotSheetNotesSurface` | Release notes background |
+| `zealotSheetOnSurface` | Headings |
+| `zealotSheetOnSurfaceVariant` | Supporting text, notes and the percentage label |
+| `zealotSheetAccent` | Primary button background, secondary actions and progress indicator |
+| `zealotSheetOnAccent` | Primary button text |
+| `zealotSheetProgressTrack` | Progress track |
+| `zealotSheetRipple` | Button press feedback |
+
+Omitted colors use Zealot's light or dark palette. Define referenced colors in
+`values` and `values-night` for separate day and night palettes. From Java,
+use the same setter. Pass `0` to restore all defaults before attaching prompts.
+The overlay applies to the in-app sheet. The compact status, standalone update
+dialog and system installer have their own appearance.
 
 ## Choose the SDK language
 

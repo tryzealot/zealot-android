@@ -27,7 +27,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import im.ews.zealot.R
 import im.ews.zealot.ReleaseInfo
+import im.ews.zealot.internal.apk.ApkUpdateStatus
+import im.ews.zealot.internal.apk.ApkUpdateStatus.Stage
 import java.lang.ref.WeakReference
+import java.text.NumberFormat
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -35,8 +38,11 @@ internal sealed interface UpdateNotice {
     data class Available(
         val release: ReleaseInfo,
         val linkFailed: Boolean = false,
-        val manual: Boolean = false
+        val manual: Boolean = false,
+        val download: Boolean = false
     ) : UpdateNotice
+    data class Apk(val status: ApkUpdateStatus, val release: ReleaseInfo?) : UpdateNotice
+    data class Minimized(val label: Int) : UpdateNotice
     data object Checking : UpdateNotice
     data object Current : UpdateNotice
     data object CheckFailed : UpdateNotice
@@ -53,7 +59,9 @@ internal class UpdatePromptBanner(activity: Activity, private val locale: Locale
         open: (ReleaseInfo) -> Unit,
         later: (ReleaseInfo) -> Unit,
         retry: () -> Unit,
-        dismiss: () -> Unit
+        dismiss: () -> Unit,
+        transferAction: (ApkUpdateStatus, ReleaseInfo?) -> Unit,
+        expand: () -> Unit = {}
     ) {
         if (notice == shown && card?.parent != null) return
         if (notice == null) {
@@ -65,31 +73,7 @@ internal class UpdatePromptBanner(activity: Activity, private val locale: Locale
         val activity = activityReference.get() ?: return
         val content = activity.findViewById<View>(android.R.id.content) as? FrameLayout ?: return
         val builder = BannerContent(activity).apply { setUpdateLocale(locale) }
-        when (notice) {
-            is UpdateNotice.Available -> with(builder) {
-                val release = notice.release
-                releaseHeader(release)
-                if (notice.linkFailed) message(R.string.zealot_prompt_open_failed)
-                if (release.changelog.isNotBlank()) releaseNotes(release.changelog)
-                actions(
-                    button(R.string.zealot_update_later) { later(release) },
-                    button(R.string.zealot_prompt_open, primary = true) { open(release) }
-                )
-            }
-            UpdateNotice.Checking -> builder.title(R.string.zealot_prompt_checking, busy = true)
-            UpdateNotice.Current -> with(builder) {
-                title(R.string.zealot_prompt_current)
-                actions(button(R.string.zealot_prompt_dismiss) { dismiss() })
-            }
-            UpdateNotice.CheckFailed -> with(builder) {
-                title(R.string.zealot_prompt_check_failed)
-                message(R.string.zealot_prompt_check_hint)
-                actions(
-                    button(R.string.zealot_prompt_dismiss) { dismiss() },
-                    button(R.string.zealot_prompt_retry, primary = true) { retry() }
-                )
-            }
-        }
+        builder.populate(notice, open, later, retry, dismiss, transferAction, expand)
 
         val params = FrameLayout.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -112,7 +96,8 @@ internal class UpdatePromptBanner(activity: Activity, private val locale: Locale
             val safeSide = maxOf(0, frame.left - location[0], location[0] + content.width - frame.right)
             val safeBottom = maxOf(0, location[1] + content.height - frame.bottom)
             val margin = builder.dp(16)
-            val width = (content.width - 2 * (safeSide + margin)).coerceIn(1, builder.dp(440))
+            val maxWidth = builder.dp(if (notice is UpdateNotice.Minimized) 320 else 440)
+            val width = (content.width - 2 * (safeSide + margin)).coerceIn(1, maxWidth)
             val bottom = safeBottom + margin
             builder.fitNotes(minOf(content.height, frame.height()))
             if (params.width != width || params.bottomMargin != bottom) {
@@ -156,22 +141,83 @@ internal class UpdatePromptBanner(activity: Activity, private val locale: Locale
     }
 }
 
-private class BannerContent(context: Context) : LinearLayout(context) {
+internal class BannerContent(context: Context, private val sheetColors: UpdateSheetColors? = null) : LinearLayout(context) {
+    private val isSheet = sheetColors != null
     private val actionRow = LinearLayout(context).apply { gravity = Gravity.END }
+    val sheetActions: View? get() = actionRow.takeIf { isSheet && it.childCount > 0 }
     private var strings = context
     private var notes: ReleaseNotesScrollView? = null
+    private var downloadProgress: ProgressBar? = null
+    private var percentLabel: TextView? = null
+    private val percentFormat by lazy {
+        val config = strings.resources.configuration
+        @Suppress("DEPRECATION")
+        val locale = if (Build.VERSION.SDK_INT >= 24) config.locales[0] else config.locale
+        NumberFormat.getPercentInstance(locale)
+    }
     private var active = true
 
     init {
         id = R.id.zealot_update_banner
         orientation = VERTICAL
-        setPadding(dp(16), dp(16), dp(16), dp(12))
-        background = shape(color(R.color.zealot_prompt_surface), 24).apply {
-            setStroke(dp(1), color(R.color.zealot_prompt_outline))
+        val inset = dp(if (isSheet) 24 else 16)
+        setPadding(inset, inset, inset, dp(12))
+        if (!isSheet) {
+            background = shape(color(R.color.zealot_prompt_surface), 24).apply {
+                setStroke(dp(1), color(R.color.zealot_prompt_outline))
+            }
+            elevation = dp(5).toFloat()
         }
-        elevation = dp(5).toFloat()
         isClickable = true
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+    }
+
+    fun populate(
+        notice: UpdateNotice,
+        open: (ReleaseInfo) -> Unit,
+        later: (ReleaseInfo) -> Unit,
+        retry: () -> Unit,
+        dismiss: () -> Unit,
+        transferAction: (ApkUpdateStatus, ReleaseInfo?) -> Unit,
+        expand: () -> Unit = {},
+        minimize: (() -> Unit)? = null
+    ) {
+        when (notice) {
+            is UpdateNotice.Available -> {
+                val release = notice.release
+                releaseHeader(release)
+                if (notice.linkFailed) message(R.string.zealot_prompt_open_failed)
+                if (release.changelog.isNotBlank()) {
+                    if (isSheet) sheetNotes(release.changelog) else releaseNotes(release.changelog)
+                }
+                actions(
+                    button(R.string.zealot_update_later) { later(release) },
+                    button(
+                        if (notice.download) R.string.zealot_apk_download else R.string.zealot_prompt_open,
+                        primary = true
+                    ) { open(release) }
+                )
+            }
+            is UpdateNotice.Apk -> transfer(notice, dismiss, transferAction, minimize)
+            is UpdateNotice.Minimized -> {
+                // Keep the entire action reachable at large font sizes.
+                setPadding(dp(4), dp(2), dp(4), dp(2))
+                addView(button(notice.label) { expand() }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+            }
+            UpdateNotice.Checking -> title(R.string.zealot_prompt_checking, busy = true)
+            UpdateNotice.Current -> {
+                title(R.string.zealot_prompt_current)
+                actions(button(R.string.zealot_prompt_dismiss) { dismiss() })
+            }
+            UpdateNotice.CheckFailed -> {
+                title(R.string.zealot_prompt_check_failed)
+                message(R.string.zealot_prompt_check_hint)
+                actions(
+                    button(R.string.zealot_prompt_dismiss) { dismiss() },
+                    button(R.string.zealot_prompt_retry, primary = true) { retry() }
+                )
+            }
+        }
     }
 
     fun setUpdateLocale(locale: Locale?) {
@@ -186,6 +232,11 @@ private class BannerContent(context: Context) : LinearLayout(context) {
         importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
         descendantFocusability = FOCUS_BLOCK_DESCENDANTS
         findFocus()?.clearFocus()
+        if (isSheet) {
+            actionRow.importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS
+            actionRow.descendantFocusability = FOCUS_BLOCK_DESCENDANTS
+            actionRow.findFocus()?.clearFocus()
+        }
     }
 
     fun releaseHeader(release: ReleaseInfo) {
@@ -197,7 +248,8 @@ private class BannerContent(context: Context) : LinearLayout(context) {
                 scaleType = ImageView.ScaleType.FIT_CENTER
                 importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
             }
-            row.addView(icon, LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(12) })
+            val size = dp(if (isSheet) 52 else 44)
+            row.addView(icon, LayoutParams(size, size).apply { marginEnd = dp(12) })
         }
         val labels = LinearLayout(context).apply {
             orientation = VERTICAL
@@ -209,6 +261,26 @@ private class BannerContent(context: Context) : LinearLayout(context) {
         }
         row.addView(labels, LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
         addView(row, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+    }
+
+    private fun sheetNotes(changelog: String) {
+        val panel = LinearLayout(context).apply {
+            orientation = VERTICAL
+            background = shape(color(R.color.zealot_prompt_notes_surface), 16)
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            addView(body(strings.getText(R.string.zealot_prompt_notes)).apply {
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+                setTextColor(color(R.color.zealot_prompt_text))
+            })
+            addView(body(changelog).apply {
+                ellipsize = null
+                setLineSpacing(dp(3).toFloat(), 1f)
+            }, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(6) })
+        }
+        addView(panel, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+            topMargin = dp(20)
+            bottomMargin = dp(8)
+        })
     }
 
     fun releaseNotes(changelog: String) {
@@ -255,9 +327,102 @@ private class BannerContent(context: Context) : LinearLayout(context) {
     }
 
     fun message(message: Int) {
-        addView(body(strings.getText(message), lines = 3), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+        addView(body(strings.getText(message)), LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
             topMargin = dp(4)
         })
+    }
+
+    fun transfer(
+        notice: UpdateNotice.Apk,
+        dismiss: () -> Unit,
+        action: (ApkUpdateStatus, ReleaseInfo?) -> Unit,
+        minimize: (() -> Unit)?
+    ) {
+        val status = notice.status
+        fun perform() = action(status, notice.release)
+        when (status.stage) {
+            Stage.QUEUED, Stage.DOWNLOADING, Stage.VERIFYING -> {
+                val label = when (status.stage) {
+                    Stage.QUEUED -> R.string.zealot_apk_queued
+                    Stage.VERIFYING -> R.string.zealot_apk_verifying
+                    else -> R.string.zealot_apk_downloading
+                }
+                val header = LinearLayout(context).apply {
+                    gravity = Gravity.CENTER_VERTICAL
+                    addView(heading(label), LayoutParams(0, LayoutParams.WRAP_CONTENT, 1f))
+                    if (status.stage == Stage.DOWNLOADING) {
+                        percentLabel = body("", lines = 1).apply {
+                            importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO
+                            addView(this, LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT).apply {
+                                marginStart = dp(12)
+                            })
+                        }
+                    }
+                }
+                addView(header, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT))
+                downloadProgress = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
+                    progressTintList = ColorStateList.valueOf(color(R.color.zealot_prompt_accent))
+                    if (isSheet) progressBackgroundTintList = ColorStateList.valueOf(color(R.color.zealot_prompt_outline))
+                    indeterminateTintList = progressTintList
+                    addView(this, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply {
+                        topMargin = dp(8)
+                    })
+                }
+                setDownloadProgress(status.percent)
+                val cancel = button(R.string.zealot_apk_cancel) { perform() }
+                if (minimize == null) actions(cancel) else actions(
+                    cancel,
+                    button(R.string.zealot_apk_background_action, primary = true) { minimize() }
+                )
+            }
+            Stage.READY -> {
+                title(R.string.zealot_apk_ready)
+                message(when (status.reason) {
+                    "storage" -> R.string.zealot_apk_storage
+                    "installer", "settings" -> R.string.zealot_apk_install_failed
+                    "permission" -> R.string.zealot_apk_permission
+                    "blocked" -> R.string.zealot_apk_blocked
+                    else -> R.string.zealot_apk_install_hint
+                })
+                val actionLabel = if (status.reason == "permission") R.string.zealot_apk_allow else R.string.zealot_apk_install
+                val install = button(actionLabel, primary = true) { perform() }
+                if (minimize == null) actions(install) else actions(
+                    button(R.string.zealot_apk_minimize) { minimize() },
+                    install
+                )
+            }
+            Stage.INSTALLING -> title(R.string.zealot_apk_installing, busy = true)
+            Stage.FAILED -> {
+                title(R.string.zealot_apk_failed)
+                message(when (status.reason) {
+                    "browser" -> R.string.zealot_apk_browser
+                    "invalid", "version" -> R.string.zealot_apk_invalid
+                    "storage" -> R.string.zealot_apk_storage
+                    else -> R.string.zealot_prompt_check_hint
+                })
+                actions(
+                    button(R.string.zealot_prompt_dismiss) { dismiss() },
+                    button(
+                        if (status.reason == "browser" && notice.release != null) R.string.zealot_prompt_open
+                        else R.string.zealot_prompt_retry, primary = true
+                    ) { perform() }
+                )
+            }
+        }
+    }
+
+    fun setDownloadProgress(percent: Int) {
+        downloadProgress?.apply {
+            if (isIndeterminate != (percent < 0)) isIndeterminate = percent < 0
+            if (percent >= 0) {
+                if (Build.VERSION.SDK_INT >= 24 && motionEnabled()) setProgress(percent, true)
+                else progress = percent
+            }
+        }
+        percentLabel?.apply {
+            visibility = if (percent < 0) GONE else VISIBLE
+            if (percent >= 0) text = percentFormat.format(percent / 100.0)
+        }
     }
 
     fun button(label: Int, primary: Boolean = false, action: Button.() -> Unit): Button =
@@ -287,7 +452,8 @@ private class BannerContent(context: Context) : LinearLayout(context) {
                 if (index > 0) marginStart = dp(4)
             })
         }
-        addView(actionRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
+        if (isSheet) actionRow.setPadding(paddingLeft, dp(4), paddingRight, dp(16))
+        else addView(actionRow, LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT).apply { topMargin = dp(4) })
     }
 
     fun fitActions(width: Int) {
@@ -296,9 +462,18 @@ private class BannerContent(context: Context) : LinearLayout(context) {
         val total = (0 until actionRow.childCount).sumOf { index ->
             val button = actionRow.getChildAt(index)
             button.measure(unconstrained, unconstrained)
-            button.measuredWidth + (button.layoutParams as LayoutParams).marginStart
+            button.measuredWidth + if (index > 0) dp(4) else 0
         }
-        actionRow.orientation = if (total > available) VERTICAL else HORIZONTAL
+        val stacked = total > available
+        if (stacked == (actionRow.orientation == VERTICAL)) return
+        actionRow.orientation = if (stacked) VERTICAL else HORIZONTAL
+        for (index in 0 until actionRow.childCount) {
+            val button = actionRow.getChildAt(index)
+            button.layoutParams = (button.layoutParams as LayoutParams).apply {
+                this.width = if (stacked && isSheet) LayoutParams.MATCH_PARENT else LayoutParams.WRAP_CONTENT
+                marginStart = if (!stacked && index > 0) dp(4) else 0
+            }
+        }
     }
 
     fun dp(value: Int): Int = (resources.displayMetrics.density * value).roundToInt()
@@ -315,7 +490,7 @@ private class BannerContent(context: Context) : LinearLayout(context) {
 
     private fun heading(label: Int) = TextView(context).apply {
         text = strings.getText(label)
-        textSize = 18f
+        textSize = if (isSheet) 22f else 18f
         typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         setTextColor(color(R.color.zealot_prompt_text))
         accessibilityLiveRegion = ACCESSIBILITY_LIVE_REGION_POLITE
@@ -336,7 +511,7 @@ private class BannerContent(context: Context) : LinearLayout(context) {
     }
 
     @Suppress("DEPRECATION")
-    private fun color(id: Int): Int = resources.getColor(id)
+    private fun color(id: Int): Int = sheetColors?.color(id) ?: resources.getColor(id)
 }
 
 private class ReleaseNotesScrollView(context: Context) : ScrollView(context) {
@@ -408,4 +583,4 @@ private val slideIn = PathInterpolator(0.16f, 1f, 0.3f, 1f)
 private val slideOut = PathInterpolator(0.4f, 0f, 1f, 1f)
 private val expandEase = PathInterpolator(0.2f, 0f, 0f, 1f)
 
-private fun motionEnabled(): Boolean = Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()
+internal fun motionEnabled(): Boolean = Build.VERSION.SDK_INT < 26 || ValueAnimator.areAnimatorsEnabled()

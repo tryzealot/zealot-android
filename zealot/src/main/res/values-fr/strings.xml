@@ -14,4 +14,24 @@
   <string name="zealot_prompt_check_hint">Vérifiez votre connexion Internet ou réessayez dans un instant.</string>
   <string name="zealot_prompt_retry">Réessayer</string>
   <string name="zealot_prompt_dismiss">Fermer</string>
+  <string name="zealot_apk_download">Télécharger</string>
+  <string name="zealot_apk_queued">En attente du téléchargement</string>
+  <string name="zealot_apk_downloading">Téléchargement de la mise à jour</string>
+  <string name="zealot_apk_cancel">Annuler le téléchargement</string>
+  <string name="zealot_apk_background_action">Continuer en arrière-plan</string>
+  <string name="zealot_apk_view_download">Voir le téléchargement</string>
+  <string name="zealot_apk_minimize">Fermer pour le moment</string>
+  <string name="zealot_apk_ready">Mise à jour prête à être installée</string>
+  <string name="zealot_apk_install_hint">Android vous demandera de confirmer la mise à jour.</string>
+  <string name="zealot_apk_install">Installer</string>
+  <string name="zealot_apk_installing">Préparation de l’installation…</string>
+  <string name="zealot_apk_failed">Impossible de télécharger la mise à jour</string>
+  <string name="zealot_apk_browser">Ouvrez la version dans votre navigateur pour la télécharger.</string>
+  <string name="zealot_apk_invalid">Ce fichier ne correspond pas à la mise à jour de cette application.</string>
+  <string name="zealot_apk_storage">Libérez de l’espace sur votre appareil, puis réessayez.</string>
+  <string name="zealot_apk_install_failed">Android n’a pas pu lancer l’installation. Vérifiez vos paramètres d’installation et réessayez.</string>
+  <string name="zealot_apk_verifying">Vérification de la mise à jour…</string>
+  <string name="zealot_apk_permission">Autorisez cette application à installer des mises à jour dans les paramètres Android, puis revenez ici.</string>
+  <string name="zealot_apk_allow">Autoriser l’installation</string>
+  <string name="zealot_apk_blocked">Android a bloqué l’installation. Vérifiez les restrictions de l’appareil avant de réessayer.</string>
 </resources>

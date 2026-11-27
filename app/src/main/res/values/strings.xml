@@ -1,4 +1,5 @@
 <resources>
+  <string name="custom_sheet_colors">Preview custom sheet colors</string>
   <string name="app_name">Zealot SDK sample</string>
   <string name="sample_intro">Connect an Android channel to preview the in-app update prompt.</string>
   <string name="endpoint_label">Server URL</string>

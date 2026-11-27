@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.view.inputmethod.InputMethodManager
 import android.widget.ArrayAdapter
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.ScrollView
 import android.widget.Spinner
@@ -19,7 +20,7 @@ import im.ews.zealot.Zealot
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
-    private data class PromptSettings(val endpoint: String, val key: String, val locale: Locale?)
+    private data class PromptSettings(val endpoint: String, val key: String, val locale: Locale?, val sheetTheme: Int)
 
     private var prompts: UpdatePrompts? = null
     private var activeSettings: PromptSettings? = null
@@ -54,6 +55,16 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.check_update).setOnClickListener { configurePrompts()?.checkNow() }
     }
 
+    override fun onPostCreate(savedInstanceState: Bundle?) {
+        super.onPostCreate(savedInstanceState)
+        if (savedInstanceState?.getBoolean("zealotPromptsEnabled") == true) configurePrompts()
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("zealotPromptsEnabled", prompts != null)
+        super.onSaveInstanceState(outState)
+    }
+
     private fun configurePrompts(): UpdatePrompts? {
         val endpoint = findViewById<EditText>(R.id.endpoint)
         val channelKey = findViewById<EditText>(R.id.channel_key)
@@ -69,7 +80,8 @@ class MainActivity : AppCompatActivity() {
         keyboard.hideSoftInputFromWindow(endpoint.windowToken, 0)
         findViewById<ScrollView>(R.id.sample_root).requestFocus()
         val locale = languages.getOrNull(findViewById<Spinner>(R.id.prompt_locale).selectedItemPosition)?.second
-        val settings = PromptSettings(serverUrl, key, locale)
+        val sheetTheme = if (findViewById<CheckBox>(R.id.custom_sheet_colors).isChecked) R.style.SampleUpdateSheet else 0
+        val settings = PromptSettings(serverUrl, key, locale, sheetTheme)
         if (activeSettings == settings) return prompts
 
         val client = try {
@@ -78,6 +90,7 @@ class MainActivity : AppCompatActivity() {
                 .setChannelKey(key)
                 .setBuildType(BuildConfig.BUILD_TYPE)
                 .setLocale(locale)
+                .setUpdateSheetTheme(sheetTheme)
         } catch (error: IllegalArgumentException) {
             status.text = error.message
             return null
@@ -86,6 +99,6 @@ class MainActivity : AppCompatActivity() {
         prompts?.close()
         activeSettings = settings
         status.setText(R.string.check_status_enabled)
-        return client.enableUpdatePrompts().also { prompts = it }
+        return client.enableUpdatePrompts(downloadUpdates = BuildConfig.DEBUG).also { prompts = it }
     }
 }

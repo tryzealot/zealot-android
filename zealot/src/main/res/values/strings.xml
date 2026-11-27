@@ -15,4 +15,24 @@
   <string name="zealot_prompt_check_hint">Check your connection or try again in a moment.</string>
   <string name="zealot_prompt_retry">Try again</string>
   <string name="zealot_prompt_dismiss">Dismiss</string>
+  <string name="zealot_apk_download">Download</string>
+  <string name="zealot_apk_queued">Waiting to download</string>
+  <string name="zealot_apk_downloading">Downloading update</string>
+  <string name="zealot_apk_cancel">Cancel download</string>
+  <string name="zealot_apk_background_action">Continue in background</string>
+  <string name="zealot_apk_view_download">View update download</string>
+  <string name="zealot_apk_minimize">Close for now</string>
+  <string name="zealot_apk_ready">Update ready to install</string>
+  <string name="zealot_apk_install_hint">Android will ask you to confirm the update.</string>
+  <string name="zealot_apk_install">Install</string>
+  <string name="zealot_apk_installing">Preparing installation…</string>
+  <string name="zealot_apk_failed">Couldn’t download the update</string>
+  <string name="zealot_apk_browser">Open the release in your browser to download it.</string>
+  <string name="zealot_apk_invalid">This file doesn’t match the update for this app.</string>
+  <string name="zealot_apk_storage">Free up space on your device and try again.</string>
+  <string name="zealot_apk_install_failed">Android couldn’t start the installation. Check your installation settings and try again.</string>
+  <string name="zealot_apk_verifying">Verifying update…</string>
+  <string name="zealot_apk_permission">Allow this app to install updates in Android settings. Then return here to install.</string>
+  <string name="zealot_apk_allow">Allow installation</string>
+  <string name="zealot_apk_blocked">Android blocked this installation. Check device restrictions before trying again.</string>
 </resources>

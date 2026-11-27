@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.StyleRes
 import im.ews.zealot.internal.DefaultUpdateDialog
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.UpdateRequestFactory
@@ -55,7 +56,8 @@ class Zealot private constructor(context: Context) {
         val presenter: UpdatePresenter? = null,
         val callbackExecutor: Executor? = null,
         val dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
-        val locale: Locale? = null
+        val locale: Locale? = null,
+        val updateSheetTheme: Int = 0
     )
 
     private val applicationContext = context.applicationContext ?: context
@@ -120,6 +122,15 @@ class Zealot private constructor(context: Context) {
     }
 
     /**
+     * Applies an Android style overlay to the in-app update sheet's colors.
+     * Set it before attaching prompts. Pass 0 to restore the default palette.
+     */
+    fun setUpdateSheetTheme(@StyleRes theme: Int): Zealot {
+        updateConfiguration { it.copy(updateSheetTheme = theme) }
+        return this
+    }
+
+    /**
      * Sets the language of Zealot's built-in UI. Pass null to follow the Activity's language.
      * Set this before starting a check or attaching automatic prompts.
      */
@@ -171,13 +182,21 @@ class Zealot private constructor(context: Context) {
      * Call on the main thread after configuring the endpoint and channel. The returned handle
      * supports manual checks and is closed automatically when the Activity is destroyed.
      */
-    fun enableUpdatePrompts(): UpdatePrompts {
+    fun enableUpdatePrompts(): UpdatePrompts = enableUpdatePrompts(downloadUpdates = false)
+
+    /**
+     * Opts into background APK downloads for a Zealot-distributed build.
+     * On Android 8 and later, the app must declare REQUEST_INSTALL_PACKAGES.
+     */
+    fun enableUpdatePrompts(downloadUpdates: Boolean): UpdatePrompts {
         check(Looper.myLooper() == Looper.getMainLooper()) { "enable update prompts on the main thread" }
         val activity = checkNotNull(activityReference?.get()) { "update prompts require an Activity" }
         val settings = configuration
         val endpoint = settings.requireEndpoint()
         val channelKey = settings.requireChannelKey()
-        return UpdatePrompts.attach(activity, endpoint, channelKey, settings.locale) { callback ->
+        return UpdatePrompts.attach(
+            activity, endpoint, channelKey, settings.locale, downloadUpdates, settings.updateSheetTheme
+        ) { callback ->
             startCheck(callback.asUpdateCallback(), showDialog = false, deliverOnMain = true, settings = settings)
         }
     }
