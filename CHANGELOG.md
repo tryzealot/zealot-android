@@ -53,6 +53,6 @@ Apps using the accepted `0.3.0` build can replace the dependency SHA with
 The minimum Android version is API 21 and the consuming app requires
 `compileSdk` 37 or newer. The SDK now depends on OkHttp 5.5.0. The package
 `im.ews.zealot` and legacy entry points remain available. See
-[migration notes](README.md#migrating-from-020).
+[migration notes](documentation/migration.md#upgrade-from-020).
 
 [Full Changelog](https://github.com/tryzealot/zealot-android/compare/2ee4b3a9e0ded0b670484b2343e1cfecb23958ab...e8a168e75f552a133111ffc3bd320967e04c1972)

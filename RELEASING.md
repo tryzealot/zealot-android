@@ -14,6 +14,7 @@
 2. Wait for Android CI. It builds the SDK and sample, checks the public JVM signatures against the last stable AAR baseline, runs lint and unit tests, and compiles independent Java and Kotlin consumers against the local Maven publication in debug and release with R8.
 3. To test JitPack before tagging, build the independent consumer against the exact reviewed commit SHA on the fork. If runtime behavior changed, test that same SHA in a representative app.
 4. After merge, wait for the Android workflow on upstream `master`. Its release job creates an annotated tag on the commit that passed CI, verifies that JitPack built that exact commit, and builds the independent consumer in debug and release with R8 before publishing.
+5. Once publication succeeds, update the stable version, release link, and dependency example in the [README](README.md#install). Update screenshots and preview labels if the release changes the quickstart experience or publishes a preview feature.
 
 To verify an untagged commit, set `owner` to the fork owner and `commit` to the
 full SHA.
