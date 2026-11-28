@@ -1,13 +1,14 @@
 <resources>
+  <string name="custom_sheet_colors">Preview custom sheet colors</string>
+  <string name="custom_sheet_typeface">Preview custom sheet font</string>
   <string name="app_name">Zealot SDK sample</string>
-  <string name="sample_intro">Enter your Zealot server and Android channel key to check for a newer release. The SDK will show an update dialog when one is available.</string>
+  <string name="sample_intro">Connect an Android channel to preview the in-app update prompt.</string>
   <string name="endpoint_label">Server URL</string>
   <string name="channel_key_label">Channel key</string>
-  <string name="check_update">Check for update</string>
-  <string name="check_status_idle">Ready to check</string>
-  <string name="check_status_loading">Checking for updates…</string>
+  <string name="prompt_language">Update prompt language</string>
+  <string name="use_app_language">Use app language</string>
+  <string name="enable_prompts">Enable update prompts</string>
+  <string name="check_update">Check now</string>
+  <string name="check_status_enabled">Update prompts enabled</string>
   <string name="check_status_missing_input">Enter both the server URL and channel key.</string>
-  <string name="check_status_available">Update available: %1$s (%2$s)</string>
-  <string name="check_status_current">No newer release for %1$s. Check that this channel contains builds for this application ID.</string>
-  <string name="check_status_error">Update check failed: %1$s</string>
 </resources>

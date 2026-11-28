@@ -1,0 +1,37 @@
+<resources>
+  <string name="zealot_update_title">Новая версия %1$s</string>
+  <string name="zealot_update_later">Позже</string>
+  <string name="zealot_update_now">Обновить</string>
+  <string name="zealot_prompt_available">Доступно обновление</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">Что нового</string>
+  <string name="zealot_prompt_hide_notes">Скрыть список изменений</string>
+  <string name="zealot_prompt_open">Открыть обновление</string>
+  <string name="zealot_prompt_open_failed">Не удалось открыть ссылку. Повторите попытку, когда браузер будет доступен.</string>
+  <string name="zealot_prompt_checking">Проверяем обновления…</string>
+  <string name="zealot_prompt_current">У вас последняя версия</string>
+  <string name="zealot_prompt_check_failed">Не удалось проверить обновления</string>
+  <string name="zealot_prompt_check_hint">Проверьте подключение или попробуйте чуть позже.</string>
+  <string name="zealot_prompt_retry">Повторить</string>
+  <string name="zealot_prompt_dismiss">Закрыть</string>
+  <string name="zealot_apk_download">Скачать</string>
+  <string name="zealot_apk_queued">Ожидание загрузки</string>
+  <string name="zealot_apk_downloading">Скачиваем обновление</string>
+  <string name="zealot_apk_cancel">Отменить загрузку</string>
+  <string name="zealot_apk_background_action">Скачать в фоне</string>
+  <string name="zealot_apk_view_download">Открыть загрузку обновления</string>
+  <string name="zealot_apk_minimize">Пока закрыть</string>
+  <string name="zealot_apk_ready">Обновление готово к установке</string>
+  <string name="zealot_apk_install_hint">Android попросит подтвердить обновление.</string>
+  <string name="zealot_apk_install">Установить</string>
+  <string name="zealot_apk_installing">Подготавливаем установку…</string>
+  <string name="zealot_apk_failed">Не удалось скачать обновление</string>
+  <string name="zealot_apk_browser">Откройте релиз в браузере, чтобы его скачать.</string>
+  <string name="zealot_apk_invalid">Этот файл не соответствует обновлению для приложения.</string>
+  <string name="zealot_apk_storage">Освободите место на устройстве и попробуйте снова.</string>
+  <string name="zealot_apk_install_failed">Android не смог запустить установку. Проверьте настройки установки и попробуйте снова.</string>
+  <string name="zealot_apk_verifying">Проверяем обновление…</string>
+  <string name="zealot_apk_permission">Разрешите приложению устанавливать обновления в настройках Android, затем вернитесь сюда.</string>
+  <string name="zealot_apk_allow">Разрешить установку</string>
+  <string name="zealot_apk_blocked">Android заблокировал установку. Проверьте ограничения устройства и попробуйте снова.</string>
+</resources>

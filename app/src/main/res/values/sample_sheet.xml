@@ -1,0 +1,11 @@
+<resources>
+    <style name="SampleUpdateSheet">
+        <item name="zealotSheetAccent">@color/sample_sheet_accent</item>
+        <item name="zealotSheetOnAccent">@color/sample_sheet_on_accent</item>
+        <item name="zealotSheetNotesSurface">@color/sample_sheet_notes</item>
+    </style>
+
+    <color name="sample_sheet_accent">#16644F</color>
+    <color name="sample_sheet_on_accent">#FFFFFF</color>
+    <color name="sample_sheet_notes">#EAF5F0</color>
+</resources>

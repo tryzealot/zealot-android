@@ -45,6 +45,9 @@ jobs:
       - name: Assemble library and sample
         run: bash .github/scripts/run-gradle.sh :zealot:assembleDebug :app:assembleDebug :zealot:assembleRelease :app:assembleRelease
 
+      - name: Check compatibility with the published SDK
+        run: python3 .github/scripts/check-api.py zealot/build/outputs/aar/zealot-release.aar --baseline zealot/api/v0.3.1.txt
+
       - name: Run Android lint
         run: bash .github/scripts/run-gradle.sh :zealot:lint :app:lint
 
@@ -54,7 +57,7 @@ jobs:
       - name: Verify Maven publication
         run: bash .github/scripts/run-gradle.sh :zealot:publishToMavenLocal
 
-      - name: Build independent Java consumer with R8
+      - name: Build independent Java and Kotlin consumers with R8
         run: bash .github/scripts/run-gradle.sh -p publication-smoke assembleDebug assembleRelease
 
       - name: Verify JitPack built this tag

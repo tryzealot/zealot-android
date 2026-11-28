@@ -3,6 +3,25 @@
 Check [GitHub Releases](https://github.com/tryzealot/zealot-android/releases)
 for published versions.
 
+## Unreleased
+
+- Let apps personalize the in-app update sheet with an Android color overlay and a custom typeface.
+- Keep the update sheet inside system insets and make long release notes fully scrollable.
+
+- Add optional in-app APK download and installation for Zealot-distributed
+  builds, with WorkManager, a minimizable bottom sheet, notification progress, APK
+  verification, cancellation and restart recovery.
+- Localize the built-in update UI in English, Simplified Chinese, German,
+  French and Russian. Add `setLocale(Locale)` for a per-instance override.
+- Add one-call update prompts for an Activity. The non-modal card supports
+  light and dark themes, app branding, animated release notes, a session-only
+  Later action, and manual checks.
+- Add an opt-in update check that follows an Activity's resume and pause events.
+  It retries on the next resume after an error or cancellation and stops after
+  the first successful result.
+- Verify JVM compatibility with the published `v0.3.1` AAR in CI and build
+  independent Java and Kotlin consumers in debug and release with R8.
+
 ## 0.3.1
 
 ### What's Changed
@@ -34,6 +53,6 @@ Apps using the accepted `0.3.0` build can replace the dependency SHA with
 The minimum Android version is API 21 and the consuming app requires
 `compileSdk` 37 or newer. The SDK now depends on OkHttp 5.5.0. The package
 `im.ews.zealot` and legacy entry points remain available. See
-[migration notes](README.md#migrating-from-020).
+[migration notes](documentation/migration.md#upgrade-from-020).
 
 [Full Changelog](https://github.com/tryzealot/zealot-android/compare/2ee4b3a9e0ded0b670484b2343e1cfecb23958ab...e8a168e75f552a133111ffc3bd320967e04c1972)

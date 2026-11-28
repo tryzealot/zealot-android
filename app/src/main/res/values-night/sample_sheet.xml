@@ -1,0 +1,5 @@
+<resources>
+    <color name="sample_sheet_accent">#92D9BD</color>
+    <color name="sample_sheet_on_accent">#0A3A2B</color>
+    <color name="sample_sheet_notes">#244438</color>
+</resources>

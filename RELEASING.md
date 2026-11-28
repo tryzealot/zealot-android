@@ -11,9 +11,10 @@
 ## Prepare a release
 
 1. Start a short branch from upstream `master`. In the release PR, increase `sdkVersion` in `version.properties` and add a matching `## X.Y.Z` section to [CHANGELOG.md](CHANGELOG.md). Link user-facing changes to the corresponding PRs.
-2. Wait for Android CI. It builds the SDK and sample, runs lint and unit tests, and compiles an independent Java consumer against the local Maven publication in debug and release with R8.
+2. Wait for Android CI. It builds the SDK and sample, checks the public JVM signatures against the last stable AAR baseline, runs lint and unit tests, and compiles independent Java and Kotlin consumers against the local Maven publication in debug and release with R8.
 3. To test JitPack before tagging, build the independent consumer against the exact reviewed commit SHA on the fork. If runtime behavior changed, test that same SHA in a representative app.
 4. After merge, wait for the Android workflow on upstream `master`. Its release job creates an annotated tag on the commit that passed CI, verifies that JitPack built that exact commit, and builds the independent consumer in debug and release with R8 before publishing.
+5. Once publication succeeds, update the stable version, release link, and dependency example in the [README](README.md#install). Update screenshots and preview labels if the release changes the quickstart experience or publishes a preview feature.
 
 To verify an untagged commit, set `owner` to the fork owner and `commit` to the
 full SHA.
@@ -30,6 +31,26 @@ To verify a stable release, set `owner` to the releasing repository's owner,
 python3 .github/scripts/verify-release.py "$tag" --jitpack-owner "$owner" --commit "$commit"
 GROUP="com.github.$owner" VERSION="$tag" \
   ./gradlew -p publication-smoke -PzealotRepository=jitpack assembleDebug assembleRelease
+```
+
+## Maintain the public API baseline
+
+CI compares the new release AAR with the signatures in
+[`zealot/api/v0.3.1.txt`](zealot/api/v0.3.1.txt). The snapshot contains public
+SDK types and their JVM members, including Kotlin default-argument methods and
+constructors used by precompiled callers. The check permits new members on
+these types. The independent consumer builds also exercise Java and Kotlin
+source usage, including named arguments and exhaustive result handling in Kotlin.
+
+After a new stable release, generate its snapshot from the published AAR
+using JDK 17. Pass the existing public class names and add the public types
+introduced in the release, including nested types. Record the release
+coordinate, commit and AAR SHA-256 in the snapshot, then update the CI path.
+
+```sh
+python3 .github/scripts/check-api.py "$published_aar" --snapshot \
+  $(awk -F ' [|] ' '!/^#/ { print $1 }' zealot/api/v0.3.1.txt | sort -u) \
+  im.ews.zealot.StartupUpdateCheck im.ews.zealot.UpdatePrompts
 ```
 
 ## Automatic publication

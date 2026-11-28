@@ -4,9 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.graphics.Typeface
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.FontRes
+import androidx.annotation.StyleRes
+import androidx.core.content.res.ResourcesCompat
 import im.ews.zealot.internal.DefaultUpdateDialog
 import im.ews.zealot.internal.InstalledAppVersion
 import im.ews.zealot.internal.UpdateRequestFactory
@@ -18,6 +22,7 @@ import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.lang.ref.WeakReference
+import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
@@ -53,7 +58,10 @@ class Zealot private constructor(context: Context) {
         val httpClient: OkHttpClient? = null,
         val presenter: UpdatePresenter? = null,
         val callbackExecutor: Executor? = null,
-        val dialogOptions: UpdateDialogOptions = UpdateDialogOptions()
+        val dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
+        val locale: Locale? = null,
+        val updateSheetTheme: Int = 0,
+        val updateSheetTypeface: Typeface? = null
     )
 
     private val applicationContext = context.applicationContext ?: context
@@ -117,6 +125,40 @@ class Zealot private constructor(context: Context) {
         return this
     }
 
+    /**
+     * Applies an Android style overlay to the in-app update sheet's colors.
+     * Set it before attaching prompts. Pass 0 to restore the default palette.
+     */
+    fun setUpdateSheetTheme(@StyleRes theme: Int): Zealot {
+        updateConfiguration { it.copy(updateSheetTheme = theme) }
+        return this
+    }
+
+    /**
+     * Sets the typeface for the in-app update sheet independently of its color theme.
+     * Set it before attaching prompts. Pass null to restore the default typography.
+     */
+    fun setUpdateSheetTypeface(typeface: Typeface?): Zealot {
+        updateConfiguration { it.copy(updateSheetTypeface = typeface) }
+        return this
+    }
+
+    /** Loads the sheet's typeface from a bundled font resource. Pass 0 to restore the default. */
+    fun setUpdateSheetFont(@FontRes font: Int): Zealot =
+        setUpdateSheetTypeface(if (font == 0) null else ResourcesCompat.getFont(applicationContext, font))
+
+    /**
+     * Sets the language of Zealot's built-in UI. Pass null to follow the Activity's language.
+     * Set this before starting a check or attaching automatic prompts.
+     */
+    fun setLocale(locale: Locale?): Zealot {
+        updateConfiguration { it.copy(locale = locale) }
+        return this
+    }
+
+    @JvmSynthetic
+    internal fun currentLocale(): Locale? = configuration.locale
+
     /** Sets callback delivery; pass null to restore the Android main thread. */
     fun setCallbackExecutor(executor: Executor?): Zealot {
         updateConfiguration { it.copy(callbackExecutor = executor) }
@@ -139,6 +181,43 @@ class Zealot private constructor(context: Context) {
     /** Checks, presents an available release, and reports one typed result. */
     fun checkAndShowUpdate(callback: UpdateResultCallback): Call =
         checkAndShowUpdate(callback.asUpdateCallback())
+
+    /**
+     * Creates a startup check for the Activity used to create this SDK instance.
+     * The optional result callback runs on the main thread with the lifecycle methods.
+     */
+    @JvmOverloads
+    fun createStartupCheck(callback: UpdateResultCallback? = null): StartupUpdateCheck {
+        check(activityReference?.get() != null) { "a startup check requires an Activity" }
+        return StartupUpdateCheck.create(callback) { resultCallback ->
+            startCheck(resultCallback.asUpdateCallback(), showDialog = true, deliverOnMain = true)
+        }
+    }
+
+    /**
+     * Enables automatic update prompts on the Activity used to create this client.
+     * Call on the main thread after configuring the endpoint and channel. The returned handle
+     * supports manual checks and is closed automatically when the Activity is destroyed.
+     */
+    fun enableUpdatePrompts(): UpdatePrompts = enableUpdatePrompts(downloadUpdates = false)
+
+    /**
+     * Opts into background APK downloads for a Zealot-distributed build.
+     * On Android 8 and later, the app must declare REQUEST_INSTALL_PACKAGES.
+     */
+    fun enableUpdatePrompts(downloadUpdates: Boolean): UpdatePrompts {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "enable update prompts on the main thread" }
+        val activity = checkNotNull(activityReference?.get()) { "update prompts require an Activity" }
+        val settings = configuration
+        val endpoint = settings.requireEndpoint()
+        val channelKey = settings.requireChannelKey()
+        return UpdatePrompts.attach(
+            activity, endpoint, channelKey, settings.locale, downloadUpdates,
+            settings.updateSheetTheme, settings.updateSheetTypeface
+        ) { callback ->
+            startCheck(callback.asUpdateCallback(), showDialog = false, deliverOnMain = true, settings = settings)
+        }
+    }
 
     /** Compatibility entry point: shows an update dialog when created from an Activity. */
     fun launch() {
@@ -169,8 +248,12 @@ class Zealot private constructor(context: Context) {
         }
     }
 
-    private fun startCheck(callback: UpdateCallback?, showDialog: Boolean): Call {
-        val settings = configuration
+    private fun startCheck(
+        callback: UpdateCallback?,
+        showDialog: Boolean,
+        deliverOnMain: Boolean = false,
+        settings: Configuration = configuration
+    ): Call {
         val request = createRequest(settings)
         val delegate = (settings.httpClient ?: defaultClient).newCall(request)
         val call = UserCancellableCall(delegate)
@@ -178,11 +261,12 @@ class Zealot private constructor(context: Context) {
             configure(
                 callback,
                 showDialog = showDialog,
-                callbackExecutor = settings.callbackExecutor,
+                callbackExecutor = if (deliverOnMain) null else settings.callbackExecutor,
                 presenter = settings.presenter,
                 maxHeight = settings.maxHeight,
                 dialogOptions = settings.dialogOptions,
-                cancelledByUser = call.cancelledByUser
+                cancelledByUser = call.cancelledByUser,
+                locale = settings.locale
             )
         })
         return call
@@ -191,14 +275,17 @@ class Zealot private constructor(context: Context) {
     @JvmSynthetic
     internal fun createRequest(): Request = createRequest(configuration)
 
+    private fun Configuration.requireEndpoint(): HttpUrl =
+        checkNotNull(endpoint) { "endpoint must be set before checking for updates" }
+
+    private fun Configuration.requireChannelKey(): String =
+        checkNotNull(channelKeys[buildType] ?: channelKeys[BUILD_TYPE]) {
+            "channelKey is not configured for build type '$buildType'"
+        }
+
     private fun createRequest(settings: Configuration): Request {
-        val endpoint = settings.endpoint
-            ?: throw IllegalStateException("endpoint must be set before checking for updates")
-        val channelKey = settings.channelKeys[settings.buildType]
-            ?: settings.channelKeys[BUILD_TYPE]
-            ?: throw IllegalStateException(
-                "channelKey is not configured for build type '${settings.buildType}'"
-            )
+        val endpoint = settings.requireEndpoint()
+        val channelKey = settings.requireChannelKey()
         val info = packageInfo()
         val buildVersion = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             info.longVersionCode
@@ -239,11 +326,12 @@ class Zealot private constructor(context: Context) {
         presenter: UpdatePresenter?,
         maxHeight: ScreenHeight?,
         dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
-        cancelledByUser: AtomicBoolean? = null
+        cancelledByUser: AtomicBoolean? = null,
+        locale: Locale? = configuration.locale
     ) {
         resultDispatcher.dispatch(
             call, result, callback, showDialog, callbackExecutor, presenter,
-            maxHeight ?: configuration.maxHeight, dialogOptions, cancelledByUser
+            maxHeight ?: configuration.maxHeight, dialogOptions, cancelledByUser, locale
         )
     }
 
@@ -251,10 +339,10 @@ class Zealot private constructor(context: Context) {
     fun showAlert(version: String, changelog: String, installUrl: String) {
         val settings = configuration
         if (Looper.myLooper() == Looper.getMainLooper()) {
-            showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
+            showAlertOnMain(version, changelog, installUrl, settings)
         } else {
             mainHandler.post {
-                showAlertOnMain(version, changelog, installUrl, settings.maxHeight, settings.dialogOptions)
+                showAlertOnMain(version, changelog, installUrl, settings)
             }
         }
     }
@@ -263,11 +351,12 @@ class Zealot private constructor(context: Context) {
         version: String,
         changelog: String,
         installUrl: String,
-        maxHeight: ScreenHeight,
-        dialogOptions: UpdateDialogOptions
+        settings: Configuration
     ) {
         val activity = activityReference?.get() ?: return
-        DefaultUpdateDialog.show(activity, version, changelog, installUrl, maxHeight, dialogOptions)
+        DefaultUpdateDialog.show(
+            activity, version, changelog, installUrl, settings.maxHeight, settings.dialogOptions, settings.locale
+        )
     }
 
     private inline fun updateConfiguration(change: (Configuration) -> Configuration) {

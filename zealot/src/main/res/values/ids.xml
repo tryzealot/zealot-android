@@ -1,3 +1,5 @@
 <resources>
     <item name="zealot_visible_dialog" type="id" />
+    <item name="zealot_update_prompts" type="id" />
+    <item name="zealot_update_banner" type="id" />
 </resources>

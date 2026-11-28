@@ -3,7 +3,8 @@
   android:id="@+id/sample_root"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
-  android:fillViewport="true">
+  android:fillViewport="true"
+  android:focusableInTouchMode="true">
 
   <LinearLayout
     android:layout_width="match_parent"
@@ -54,11 +55,48 @@
       android:inputType="textPassword"
       android:singleLine="true" />
 
+    <TextView
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="16dp"
+      android:labelFor="@id/prompt_locale"
+      android:text="@string/prompt_language" />
+
+    <Spinner
+      android:id="@+id/prompt_locale"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp" />
+
+    <CheckBox
+      android:id="@+id/custom_sheet_colors"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:layout_marginTop="12dp"
+      android:minHeight="48dp"
+      android:text="@string/custom_sheet_colors" />
+
+    <CheckBox
+      android:id="@+id/custom_sheet_typeface"
+      android:layout_width="wrap_content"
+      android:layout_height="wrap_content"
+      android:minHeight="48dp"
+      android:text="@string/custom_sheet_typeface" />
+
     <Button
-      android:id="@+id/check_update"
+      android:id="@+id/enable_prompts"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_marginTop="24dp"
+      android:textAllCaps="false"
+      android:text="@string/enable_prompts" />
+
+    <Button
+      android:id="@+id/check_update"
+      style="?android:attr/borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="wrap_content"
+      android:textAllCaps="false"
       android:text="@string/check_update" />
 
     <TextView
@@ -66,8 +104,7 @@
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_marginTop="16dp"
-      android:accessibilityLiveRegion="polite"
-      android:text="@string/check_status_idle" />
+      android:accessibilityLiveRegion="polite" />
 
   </LinearLayout>
 </ScrollView>

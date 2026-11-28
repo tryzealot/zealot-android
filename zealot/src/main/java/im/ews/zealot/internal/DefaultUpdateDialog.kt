@@ -2,15 +2,13 @@ package im.ews.zealot.internal
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import android.net.Uri
 import android.view.View
 import android.view.WindowManager
 import im.ews.zealot.R
 import im.ews.zealot.UpdateDialogOptions
 import im.ews.zealot.Zealot
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import java.util.Locale
 
 /** Optional Android UI for applications that use the original [Zealot.launch] flow. */
 internal object DefaultUpdateDialog {
@@ -20,7 +18,8 @@ internal object DefaultUpdateDialog {
         changelog: String,
         installUrl: String,
         maxHeight: Zealot.ScreenHeight,
-        options: UpdateDialogOptions
+        options: UpdateDialogOptions,
+        locale: Locale?
     ): AlertDialog? {
         if (activity.isFinishing || activity.isDestroyed) return null
         val parsedInstallUrl = installUrl.toHttpUrlOrNull() ?: return null
@@ -29,19 +28,13 @@ internal object DefaultUpdateDialog {
             return null
         }
 
+        val localized = activity.withUpdateLocale(locale)
         val dialog = AlertDialog.Builder(activity)
-            .setTitle(options.title ?: activity.getString(R.string.zealot_update_title, version))
+            .setTitle(options.title ?: localized.getString(R.string.zealot_update_title, version))
             .apply { if (changelog.isNotBlank()) setMessage(changelog) }
-            .setNegativeButton(options.laterButtonText ?: activity.getString(R.string.zealot_update_later), null)
-            .setPositiveButton(options.updateButtonText ?: activity.getString(R.string.zealot_update_now)) { _, _ ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(parsedInstallUrl.toString()))
-                try {
-                    activity.startActivity(intent)
-                } catch (_: ActivityNotFoundException) {
-                    // No browser or installer can handle the release link.
-                } catch (_: SecurityException) {
-                    // The system or device policy can deny opening the release link.
-                }
+            .setNegativeButton(options.laterButtonText ?: localized.getString(R.string.zealot_update_later), null)
+            .setPositiveButton(options.updateButtonText ?: localized.getString(R.string.zealot_update_now)) { _, _ ->
+                openUpdateLink(activity, parsedInstallUrl.toString())
             }
             .setCancelable(options.cancelable)
             .create()

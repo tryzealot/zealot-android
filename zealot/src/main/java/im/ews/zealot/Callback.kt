@@ -4,6 +4,7 @@ import im.ews.zealot.internal.UpdateResponseReader
 import okhttp3.Call
 import okhttp3.Response
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.Executor
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -19,6 +20,7 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
     private var maxHeight: Zealot.ScreenHeight? = null
     private var dialogOptions = UpdateDialogOptions()
     private var cancelledByUser: AtomicBoolean? = null
+    private var locale = zealot.currentLocale()
 
     @JvmSynthetic
     internal fun configure(
@@ -28,7 +30,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         presenter: UpdatePresenter?,
         maxHeight: Zealot.ScreenHeight,
         dialogOptions: UpdateDialogOptions = UpdateDialogOptions(),
-        cancelledByUser: AtomicBoolean? = null
+        cancelledByUser: AtomicBoolean? = null,
+        locale: Locale? = this.locale
     ) {
         this.updateCallback = updateCallback
         this.showDialog = showDialog
@@ -37,6 +40,7 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         this.maxHeight = maxHeight
         this.dialogOptions = dialogOptions
         this.cancelledByUser = cancelledByUser
+        this.locale = locale
     }
 
     override fun onResponse(call: Call, response: Response) {
@@ -51,7 +55,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
         zealot.dispatchResult(
             call, result, updateCallback, showDialog, callbackExecutor, presenter, maxHeight,
             dialogOptions,
-            cancelledByUser
+            cancelledByUser,
+            locale
         )
     }
 
@@ -66,7 +71,8 @@ class Callback(val zealot: Zealot) : okhttp3.Callback {
             presenter,
             maxHeight,
             dialogOptions,
-            cancelledByUser
+            cancelledByUser,
+            locale
         )
     }
 

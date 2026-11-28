@@ -1,0 +1,37 @@
+<resources>
+  <string name="zealot_update_title">Neue Version %1$s</string>
+  <string name="zealot_update_later">Später</string>
+  <string name="zealot_update_now">Jetzt aktualisieren</string>
+  <string name="zealot_prompt_available">Update verfügbar</string>
+  <string name="zealot_prompt_app_version">%1$s · %2$s</string>
+  <string name="zealot_prompt_notes">Was ist neu?</string>
+  <string name="zealot_prompt_hide_notes">Änderungen ausblenden</string>
+  <string name="zealot_prompt_open">Update öffnen</string>
+  <string name="zealot_prompt_open_failed">Der Link konnte nicht geöffnet werden. Versuche es erneut, sobald ein Browser verfügbar ist.</string>
+  <string name="zealot_prompt_checking">Suche nach Updates…</string>
+  <string name="zealot_prompt_current">Du hast die neueste Version</string>
+  <string name="zealot_prompt_check_failed">Updates konnten nicht geprüft werden</string>
+  <string name="zealot_prompt_check_hint">Prüfe deine Internetverbindung oder versuche es später erneut.</string>
+  <string name="zealot_prompt_retry">Erneut versuchen</string>
+  <string name="zealot_prompt_dismiss">Schließen</string>
+  <string name="zealot_apk_download">Herunterladen</string>
+  <string name="zealot_apk_queued">Warten auf den Download</string>
+  <string name="zealot_apk_downloading">Update wird heruntergeladen</string>
+  <string name="zealot_apk_cancel">Download abbrechen</string>
+  <string name="zealot_apk_background_action">Im Hintergrund fortsetzen</string>
+  <string name="zealot_apk_view_download">Update-Download ansehen</string>
+  <string name="zealot_apk_minimize">Vorerst schließen</string>
+  <string name="zealot_apk_ready">Update zur Installation bereit</string>
+  <string name="zealot_apk_install_hint">Android bittet dich, das Update zu bestätigen.</string>
+  <string name="zealot_apk_install">Installieren</string>
+  <string name="zealot_apk_installing">Installation wird vorbereitet…</string>
+  <string name="zealot_apk_failed">Das Update konnte nicht heruntergeladen werden</string>
+  <string name="zealot_apk_browser">Öffne die Version im Browser, um sie herunterzuladen.</string>
+  <string name="zealot_apk_invalid">Diese Datei entspricht dem Update für diese App nicht.</string>
+  <string name="zealot_apk_storage">Gib Speicherplatz frei und versuche es erneut.</string>
+  <string name="zealot_apk_install_failed">Android konnte die Installation nicht starten. Prüfe die Installationseinstellungen und versuche es erneut.</string>
+  <string name="zealot_apk_verifying">Update wird geprüft…</string>
+  <string name="zealot_apk_permission">Erlaube dieser App in den Android-Einstellungen, Updates zu installieren. Kehre dann hierher zurück.</string>
+  <string name="zealot_apk_allow">Installation erlauben</string>
+  <string name="zealot_apk_blocked">Android hat die Installation blockiert. Prüfe die Einschränkungen des Geräts und versuche es erneut.</string>
+</resources>
