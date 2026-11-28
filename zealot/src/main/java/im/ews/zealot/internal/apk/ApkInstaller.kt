@@ -21,22 +21,31 @@ internal object ApkInstaller {
     val status = MutableLiveData<Status?>()
     private val io = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
-    private var confirmation: Intent? = null
+    private class Attempt(owner: Any) {
+        var owner: Any? = owner
+        var confirmation: Intent? = null
+        var presented = false
+    }
+    private var attempt: Attempt? = null
 
-    fun install(context: Context, workId: UUID, build: Long) {
+    fun install(context: Context, workId: UUID, build: Long, owner: Any) {
         if (status.value?.busy == true) return
         val app = context.applicationContext
+        val preferences = preferences(app)
+        val previous = preferences.getInt("session", -1)
+        if (previous >= 0) preferences.edit().remove("session").apply()
+        val current = Attempt(owner)
+        attempt = current
         status.value = Status(workId, busy = true)
         io.execute {
             val installer = app.packageManager.packageInstaller
-            val previous = preferences(app).getInt("session", -1)
-            if (previous >= 0) abandon(app, installer, previous)
+            if (previous >= 0) runCatching { installer.abandonSession(previous) }
             var sessionId = -1
             try {
                 val file = apkFile(app, workId)
                 if (!validateApk(app, file, build)) {
                     file.delete()
-                    main.post { status.value = Status(workId, "invalid") }
+                    main.post { finish(current, Status(workId, "invalid")) }
                     return@execute
                 }
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
@@ -54,26 +63,46 @@ internal object ApkInstaller {
                         file.inputStream().use { it.copyTo(output) }
                         session.fsync(output)
                     }
-                    if (!preferences(app).edit().putInt("session", sessionId).commit()) {
+                    if (!preferences.edit().putInt("session", sessionId).commit()) {
                         throw IOException("Could not save the installer session")
                     }
                     session.commit(result.intentSender)
                 }
             } catch (_: IOException) {
-                fail(app, installer, sessionId, workId, "storage")
+                fail(app, installer, sessionId, current, Status(workId, "storage"))
             } catch (_: IllegalStateException) {
-                fail(app, installer, sessionId, workId, "installer")
+                fail(app, installer, sessionId, current, Status(workId, "installer"))
             } catch (_: SecurityException) {
-                fail(app, installer, sessionId, workId, "installer")
+                fail(app, installer, sessionId, current, Status(workId, "installer"))
             } catch (_: IllegalArgumentException) {
-                fail(app, installer, sessionId, workId, "installer")
+                fail(app, installer, sessionId, current, Status(workId, "installer"))
             }
         }
     }
 
-    fun launchConfirmation(activity: Activity) {
-        val next = confirmation ?: return
-        confirmation = null
+    fun detach(context: Context, owner: Any) {
+        val current = attempt?.takeIf { it.owner === owner } ?: return
+        current.owner = null
+        if (current.presented) return
+        if (current.confirmation != null) {
+            abandonUnconfirmed(context, current)
+        } else {
+            // Let the current I/O finish staging before clearing its session.
+            io.execute { main.post { abandonUnconfirmed(context, current) } }
+        }
+    }
+
+    private fun abandonUnconfirmed(context: Context, current: Attempt) {
+        if (attempt !== current || current.presented) return
+        abandonPending(context, preferences(context).getInt("session", -1))
+        finish(current, null)
+    }
+
+    fun launchConfirmation(activity: Activity, owner: Any) {
+        val current = attempt?.takeIf { it.owner === owner } ?: return
+        val next = current.confirmation ?: return
+        current.confirmation = null
+        current.presented = true
         try {
             activity.startActivity(next)
         } catch (_: ActivityNotFoundException) {
@@ -84,13 +113,9 @@ internal object ApkInstaller {
     }
 
     private fun confirmationFailed(context: Context) {
-        val current = status.value ?: return
-        val app = context.applicationContext
-        val session = preferences(app).getInt("session", -1)
-        io.execute {
-            if (session >= 0) abandon(app, app.packageManager.packageInstaller, session)
-            main.post { status.value = Status(current.workId, "installer") }
-        }
+        val workId = status.value?.workId ?: return
+        abandonPending(context, preferences(context).getInt("session", -1))
+        finish(attempt, Status(workId, "installer"))
     }
 
     @Suppress("DEPRECATION")
@@ -101,13 +126,26 @@ internal object ApkInstaller {
         val workId = intent.getStringExtra("workId")?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: return
         val result = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)
         if (result == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-            confirmation = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
+            val current = attempt
+            if (current?.owner == null) {
+                abandonPending(context, sessionId)
+                finish(current, null)
+                return
+            }
+            // A subsequent user-action result, if any, requires handing off again.
+            current.presented = false
+            current.confirmation = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent::class.java)
             else intent.getParcelableExtra(Intent.EXTRA_INTENT)
-            status.value = Status(workId, reason = if (confirmation == null) "installer" else null, busy = confirmation != null)
+            if (current.confirmation == null) {
+                abandonPending(context, sessionId)
+                finish(current, Status(workId, "installer"))
+            } else {
+                status.value = Status(workId, busy = true)
+            }
             return
         }
-        confirmation = null
         preferences.edit().remove("session").apply()
+        attempt = null
         when (result) {
             PackageInstaller.STATUS_SUCCESS -> {
                 apkFile(context, workId).delete()
@@ -123,9 +161,22 @@ internal object ApkInstaller {
         }
     }
 
-    private fun fail(context: Context, installer: PackageInstaller, sessionId: Int, workId: UUID, reason: String) {
+    private fun finish(current: Attempt?, result: Status?) {
+        if (attempt !== current) return
+        attempt = null
+        status.value = result
+    }
+
+    private fun fail(context: Context, installer: PackageInstaller, sessionId: Int, current: Attempt, result: Status) {
         if (sessionId >= 0) abandon(context, installer, sessionId)
-        main.post { status.value = Status(workId, reason) }
+        main.post { finish(current, result) }
+    }
+
+    private fun abandonPending(context: Context, sessionId: Int) {
+        if (sessionId < 0) return
+        val app = context.applicationContext
+        preferences(app).edit().remove("session").apply()
+        io.execute { runCatching { app.packageManager.packageInstaller.abandonSession(sessionId) } }
     }
 
     private fun abandon(context: Context, installer: PackageInstaller, sessionId: Int) {

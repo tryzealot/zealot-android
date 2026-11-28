@@ -17,15 +17,22 @@ import androidx.core.graphics.Insets
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.work.ListenableWorker.Result
+import androidx.work.Configuration
+import androidx.work.Worker
+import androidx.work.WorkerFactory
+import androidx.work.WorkerParameters
 import androidx.work.testing.TestWorkerBuilder
+import androidx.work.testing.WorkManagerTestInitHelper
 import androidx.work.workDataOf
 import im.ews.zealot.internal.apk.ApkDownloadWorker
 import im.ews.zealot.internal.apk.ApkInstaller
 import im.ews.zealot.internal.apk.ApkUpdateStatus
+import im.ews.zealot.internal.apk.ApkUpdates
 import im.ews.zealot.internal.apk.apkFile
 import im.ews.zealot.internal.apk.validateApk
 import im.ews.zealot.internal.UpdateNotice
 import im.ews.zealot.internal.UpdatePromptSheet
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
@@ -116,6 +123,124 @@ class ApkUpdateTest {
         ApkInstaller.accept(app, result.putExtra(PackageInstaller.EXTRA_SESSION_ID, 44))
         assertFalse(apk.exists())
         assertNull(ApkInstaller.status.value)
+    }
+
+    @Test
+    fun finishedDownloadIsReconciledWithTheLatestSuccessfulCatalogResult() {
+        val config = Configuration.Builder().setWorkerFactory(object : WorkerFactory() {
+            override fun createWorker(appContext: Context, workerClassName: String, workerParameters: WorkerParameters): Worker =
+                object : Worker(appContext, workerParameters) {
+                    override fun doWork(): Result {
+                        apkFile(appContext, id).apply {
+                            parentFile!!.mkdirs()
+                            writeBytes(byteArrayOf(1))
+                        }
+                        return Result.success(workDataOf("build" to inputData.getLong("build", 0)))
+                    }
+                }
+        }).build()
+        WorkManagerTestInitHelper.initializeTestWorkManager(app, config)
+        val downloads = ApkUpdates(app, "https://example.org".toHttpUrl(), "channel", null) {}
+        val release = ReleaseInfo("2.0", "2", "https://example.org/update.apk", "")
+        downloads.observe()
+        try {
+            downloads.download(release)
+            val id = requireNotNull(downloads.workId)
+            val driver = requireNotNull(WorkManagerTestInitHelper.getTestDriver(app))
+            driver.setAllConstraintsMet(id)
+            await { downloads.status()?.stage == ApkUpdateStatus.Stage.READY }
+            downloads.reconcile(UpdateResult.UpdateAvailable(release))
+            assertEquals(ApkUpdateStatus.Stage.READY, downloads.status()?.stage)
+            downloads.reconcile(UpdateResult.Error(UpdateError(UpdateErrorCode.NETWORK, "Offline")))
+            assertEquals(ApkUpdateStatus.Stage.READY, downloads.status()?.stage)
+            downloads.reconcile(UpdateResult.UpdateAvailable(release.copy(buildVersion = "3")))
+            assertNull(downloads.status())
+            assertFalse(apkFile(app, id).exists())
+
+            downloads.download(release.copy(buildVersion = "3"))
+            val next = requireNotNull(downloads.workId)
+            downloads.reconcile(UpdateResult.UpToDate)
+            driver.setAllConstraintsMet(next)
+            await { downloads.status() == null }
+            assertFalse(apkFile(app, next).exists())
+        } finally {
+            downloads.close()
+            WorkManagerTestInitHelper.closeWorkDatabase()
+        }
+    }
+
+    @Test
+    fun closingTheInstallOwnerReleasesUnshownConfirmationAndRetainsTheApk() {
+        val packageManager = Shadows.shadowOf(app.packageManager)
+        packageManager.installPackage(packageInfo(app.packageName, 1, signer))
+        val prefs = app.getSharedPreferences("im.ews.zealot.apk_installer", Context.MODE_PRIVATE)
+        val installer = app.packageManager.packageInstaller
+        for (callbackBeforeClose in listOf(false, true)) {
+            val owner = Any()
+            val id = UUID.randomUUID()
+            val apk = apkFile(app, id).apply {
+                parentFile!!.mkdirs()
+                writeBytes(byteArrayOf(1))
+            }
+            packageManager.setPackageArchiveInfo(apk.path, packageInfo(app.packageName, 2, signer))
+            ApkInstaller.install(app, id, 2, owner)
+            await { prefs.contains("session") }
+            val session = prefs.getInt("session", -1)
+            val result = Intent().putExtra("workId", id.toString())
+                .putExtra(PackageInstaller.EXTRA_SESSION_ID, session)
+                .putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_PENDING_USER_ACTION)
+                .putExtra(Intent.EXTRA_INTENT, Intent(Intent.ACTION_VIEW))
+            if (callbackBeforeClose) ApkInstaller.accept(app, result)
+            assertTrue(ApkInstaller.status.value?.busy == true)
+            ApkInstaller.detach(app, owner)
+            if (!callbackBeforeClose) ApkInstaller.accept(app, result)
+            await { installer.getSessionInfo(session) == null }
+            assertNull(ApkInstaller.status.value)
+            assertFalse(prefs.contains("session"))
+            assertTrue(apk.isFile)
+            ApkInstaller.accept(app, result)
+            assertNull(ApkInstaller.status.value)
+        }
+
+        val owner = Any()
+        val id = UUID.randomUUID()
+        val apk = apkFile(app, id).apply {
+            parentFile!!.mkdirs()
+            writeBytes(byteArrayOf(1))
+        }
+        packageManager.setPackageArchiveInfo(apk.path, packageInfo(app.packageName, 2, signer))
+        val screen = Robolectric.buildActivity(Activity::class.java).setup()
+        ApkInstaller.install(app, id, 2, owner)
+        await { prefs.contains("session") }
+        val session = prefs.getInt("session", -1)
+        val handoff = Intent(Intent.ACTION_VIEW)
+        val result = Intent().putExtra("workId", id.toString())
+            .putExtra(PackageInstaller.EXTRA_SESSION_ID, session)
+            .putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_PENDING_USER_ACTION)
+            .putExtra(Intent.EXTRA_INTENT, handoff)
+        ApkInstaller.accept(app, result)
+        ApkInstaller.launchConfirmation(screen.get(), Any())
+        assertNull(Shadows.shadowOf(screen.get()).nextStartedActivity)
+        ApkInstaller.launchConfirmation(screen.get(), owner)
+        assertEquals(handoff.action, Shadows.shadowOf(screen.get()).nextStartedActivity.action)
+        ApkInstaller.detach(app, owner)
+        assertTrue(ApkInstaller.status.value?.busy == true)
+        assertTrue(prefs.contains("session"))
+        ApkInstaller.accept(app, result.putExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE_ABORTED))
+        assertNull(ApkInstaller.status.value)
+        assertTrue(apk.isFile)
+        screen.pause().stop().destroy()
+    }
+
+    private fun await(condition: () -> Boolean) {
+        val main = Shadows.shadowOf(Looper.getMainLooper())
+        val deadline = System.nanoTime() + 5_000_000_000L
+        while (System.nanoTime() < deadline) {
+            main.idle()
+            if (condition()) return
+            Thread.sleep(10)
+        }
+        assertTrue("Expected asynchronous state was not reached", condition())
     }
 
     @Test

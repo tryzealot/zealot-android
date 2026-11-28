@@ -21,6 +21,7 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import im.ews.zealot.ReleaseInfo
+import im.ews.zealot.UpdateResult
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import java.security.MessageDigest
@@ -66,16 +67,27 @@ internal class ApkUpdates(
     private val work = WorkManager.getInstance(app)
     private val history = work.getWorkInfosForUniqueWorkLiveData(uniqueWork)
     private val main = Executor { Handler(Looper.getMainLooper()).post(it) }
+    private data class EnqueuedDownload(val id: UUID, val build: Long)
+    private data class CheckedDownload(val id: UUID?, val serverBuild: Long?)
     private var latest: WorkInfo? = null
-    private var enqueued: UUID? = null
-    val workId: UUID? get() = enqueued ?: latest?.id
+    private var enqueued: EnqueuedDownload? = null
+    val workId: UUID? get() = enqueued?.id ?: latest?.id
+    val workBuild: Long? get() = enqueued?.build ?: latest?.let(::targetBuild)
     private var hiddenFailure: UUID? = null
+    private var checkedDownload: CheckedDownload? = null
+    private var historyLoaded = false
     private var settingsUnavailable = false
     private var enqueueFailed = false
     private val workObserver = Observer<List<WorkInfo>> { infos ->
         val info = infos.orEmpty().firstOrNull { !it.state.isFinished } ?: infos.orEmpty().firstOrNull()
         latest = info
-        if (info?.id == enqueued || info?.state?.isFinished == false) enqueued = null
+        if (info?.id == enqueued?.id || info?.state?.isFinished == false) enqueued = null
+        if (!historyLoaded) {
+            historyLoaded = true
+            // The first successful check can arrive before the persisted work is loaded.
+            val check = checkedDownload
+            if (check != null && check.id == null) checkedDownload = check.copy(id = workId)
+        }
         changed()
     }
     private val installObserver = Observer<ApkInstaller.Status?> { changed() }
@@ -88,6 +100,7 @@ internal class ApkUpdates(
     fun close() {
         history.removeObserver(workObserver)
         ApkInstaller.status.removeObserver(installObserver)
+        ApkInstaller.detach(app, this)
     }
 
     fun canDownload(release: ReleaseInfo): Boolean {
@@ -97,22 +110,24 @@ internal class ApkUpdates(
     }
 
     fun download(release: ReleaseInfo) {
-        if (enqueued != null || latest?.state?.isFinished == false || ApkInstaller.status.value?.busy == true) return
+        if (enqueued != null || latest?.state?.isFinished == false) return
         if (!canDownload(release)) return
+        val build = release.buildVersion.toLong()
         val request = OneTimeWorkRequestBuilder<ApkDownloadWorker>()
-            .setInputData(workDataOf("url" to release.installUrl, "build" to release.buildVersion.toLong(),
+            .setInputData(workDataOf("url" to release.installUrl, "build" to build,
                 "locale" to locale?.toLanguageTag()))
             .addTag(scope)
+            .addTag("build:$build")
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.EXPONENTIAL, 10, TimeUnit.SECONDS)
             .keepResultsForAtLeast(7, TimeUnit.DAYS)
             .build()
-        enqueued = request.id
+        enqueued = EnqueuedDownload(request.id, build)
         enqueueFailed = false
         hiddenFailure = null
         val operation = work.enqueueUniqueWork(uniqueWork, ExistingWorkPolicy.KEEP, request).result
         operation.addListener({
-            if (enqueued != request.id) return@addListener
+            if (enqueued?.id != request.id) return@addListener
             if (runCatching { operation.get() }.isFailure) {
                 enqueued = null
                 enqueueFailed = true
@@ -121,7 +136,7 @@ internal class ApkUpdates(
                 // KEEP can succeed without creating our request when another Activity enqueues first.
                 val persisted = work.getWorkInfoById(request.id)
                 persisted.addListener({
-                    if (enqueued == request.id && runCatching { persisted.get() }.getOrNull() == null) {
+                    if (enqueued?.id == request.id && runCatching { persisted.get() }.getOrNull() == null) {
                         enqueued = null
                         changed()
                     }
@@ -132,7 +147,7 @@ internal class ApkUpdates(
     }
 
     fun cancel() {
-        val id = enqueued ?: latest?.takeIf { scope in it.tags && !it.state.isFinished }?.id ?: return
+        val id = enqueued?.id ?: latest?.takeIf { scope in it.tags && !it.state.isFinished }?.id ?: return
         work.cancelWorkById(id)
     }
 
@@ -141,11 +156,32 @@ internal class ApkUpdates(
         hiddenFailure = latest?.id
     }
 
+    fun reconcile(result: UpdateResult) {
+        val build = when (result) {
+            is UpdateResult.UpdateAvailable -> result.release.buildVersion.toLongOrNull()
+            UpdateResult.UpToDate -> null
+            is UpdateResult.Error -> return
+        }
+        checkedDownload = CheckedDownload(workId, build)
+        enqueueFailed = false
+    }
+
     fun status(): ApkUpdateStatus? {
         if (enqueued != null) return ApkUpdateStatus(ApkUpdateStatus.Stage.QUEUED)
         if (enqueueFailed) return ApkUpdateStatus(ApkUpdateStatus.Stage.FAILED, reason = "background")
         val latest = latest ?: return null
         if (scope !in latest.tags) return null
+        val installer = ApkInstaller.status.value
+        val installation = installer?.takeIf { it.workId == latest.id }
+        if (installation?.busy == true) return ApkUpdateStatus(ApkUpdateStatus.Stage.INSTALLING)
+        // WorkManager can report a completed download after the server check has finished.
+        val checked = checkedDownload
+        if (latest.state.isFinished && checked?.id == latest.id &&
+            (checked.serverBuild == null || targetBuild(latest) != checked.serverBuild)
+        ) {
+            apkFile(app, latest.id).delete()
+            return null
+        }
         return when (latest.state) {
             WorkInfo.State.ENQUEUED, WorkInfo.State.BLOCKED -> ApkUpdateStatus(ApkUpdateStatus.Stage.QUEUED)
             WorkInfo.State.RUNNING -> if (latest.progress.getBoolean("verifying", false)) {
@@ -157,8 +193,6 @@ internal class ApkUpdates(
                     apkFile(app, latest.id).delete()
                     return null
                 }
-                val installation = ApkInstaller.status.value?.takeIf { it.workId == latest.id }
-                if (installation?.busy == true) return ApkUpdateStatus(ApkUpdateStatus.Stage.INSTALLING)
                 val file = apkFile(app, latest.id)
                 if (!file.isFile) return installation?.reason?.let {
                     ApkUpdateStatus(ApkUpdateStatus.Stage.FAILED, reason = it)
@@ -167,6 +201,7 @@ internal class ApkUpdates(
                     file.delete()
                     return null
                 }
+                if (installer?.busy == true) return ApkUpdateStatus(ApkUpdateStatus.Stage.INSTALLING)
                 val reason = when {
                     settingsUnavailable -> "settings"
                     needsPermission() -> "permission"
@@ -181,6 +216,7 @@ internal class ApkUpdates(
     }
 
     fun install(activity: Activity) {
+        if (status()?.stage != ApkUpdateStatus.Stage.READY) return
         val latest = latest?.takeIf { it.state == WorkInfo.State.SUCCEEDED && scope in it.tags } ?: return
         if (needsPermission()) {
             try {
@@ -194,16 +230,19 @@ internal class ApkUpdates(
             changed()
         } else {
             settingsUnavailable = false
-            ApkInstaller.install(app, latest.id, latest.outputData.getLong("build", 0))
+            ApkInstaller.install(app, latest.id, latest.outputData.getLong("build", 0), this)
         }
     }
 
     fun launchConfirmation(activity: Activity) {
         val current = latest ?: return
         if (scope in current.tags && current.id == ApkInstaller.status.value?.workId) {
-            ApkInstaller.launchConfirmation(activity)
+            ApkInstaller.launchConfirmation(activity, this)
         }
     }
 
     private fun needsPermission() = Build.VERSION.SDK_INT >= 26 && !app.packageManager.canRequestPackageInstalls()
+
+    private fun targetBuild(info: WorkInfo): Long? = info.outputData.getLong("build", 0L).takeIf { it > 0L }
+        ?: info.tags.firstOrNull { it.startsWith("build:") }?.removePrefix("build:")?.toLongOrNull()
 }

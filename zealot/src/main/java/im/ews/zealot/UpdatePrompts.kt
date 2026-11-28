@@ -32,12 +32,13 @@ class UpdatePrompts private constructor(
     private val startCheck: (UpdateResultCallback) -> Call
 ) : AutoCloseable {
     private data class Channel(val endpoint: HttpUrl, val key: String)
+    private data class MinimizedDownload(val id: UUID, val build: Long?)
     private enum class RetryAction { DOWNLOAD, BROWSER }
 
     companion object {
         private val checkIntervalMillis = TimeUnit.HOURS.toMillis(1)
         private val deferredByApplication = WeakHashMap<Application, MutableSet<Pair<Channel, String>>>()
-        private val minimizedByApplication = WeakHashMap<Application, MutableMap<Channel, UUID>>()
+        private val minimizedByApplication = WeakHashMap<Application, MutableMap<Channel, MinimizedDownload>>()
 
         @JvmSynthetic
         internal fun attach(
@@ -159,18 +160,21 @@ class UpdatePrompts private constructor(
         }
         val current = notice
         val transfer = apkUpdates?.status()
-        val minimized = minimizedJobs[channel]?.let { it == apkUpdates?.workId } == true
+        val minimized = minimizedJobs[channel]?.takeIf { it.id == apkUpdates?.workId }
         val visible = when {
-            transfer != null && minimized -> UpdateNotice.Minimized(when (transfer.stage) {
+            transfer != null && minimized != null -> UpdateNotice.Minimized(when (transfer.stage) {
                 ApkUpdateStatus.Stage.READY -> R.string.zealot_apk_ready
                 ApkUpdateStatus.Stage.FAILED -> R.string.zealot_apk_failed
                 ApkUpdateStatus.Stage.INSTALLING -> R.string.zealot_apk_installing
                 else -> R.string.zealot_apk_view_download
             })
-            minimized -> null
-            transfer != null && !(transfer.stage == ApkUpdateStatus.Stage.FAILED && manual && call != null) ->
+            manual && call != null && (transfer?.stage == ApkUpdateStatus.Stage.FAILED ||
+                transfer?.stage == ApkUpdateStatus.Stage.READY) -> UpdateNotice.Checking
+            transfer != null ->
                 UpdateNotice.Apk(transfer, (current as? UpdateNotice.Available)?.release)
             manual && call != null -> UpdateNotice.Checking
+            current is UpdateNotice.Available && minimized?.build != null &&
+                minimized.build == current.release.buildVersion.toLongOrNull() -> null
             current is UpdateNotice.Available && !current.manual && isDeferred(current.release) -> null
             current is UpdateNotice.Available -> current.copy(download = apkUpdates?.canDownload(current.release) == true)
             else -> current
@@ -190,7 +194,8 @@ class UpdatePrompts private constructor(
     }
 
     private fun minimize() {
-        apkUpdates?.workId?.let { minimizedJobs[channel] = it }
+        val downloads = apkUpdates ?: return
+        downloads.workId?.let { minimizedJobs[channel] = MinimizedDownload(it, downloads.workBuild) }
         refresh()
     }
 
@@ -209,7 +214,10 @@ class UpdatePrompts private constructor(
 
     private fun receive(result: UpdateResult) {
         call = null
-        if (result !is UpdateResult.Error) lastSuccessfulCheck = SystemClock.elapsedRealtime()
+        if (result !is UpdateResult.Error) {
+            lastSuccessfulCheck = SystemClock.elapsedRealtime()
+            apkUpdates?.reconcile(result)
+        }
         notice = when (result) {
             is UpdateResult.UpdateAvailable -> result.release
                 .takeIf { manual || (it.buildVersion != openedBuild && !isDeferred(it)) }
@@ -249,7 +257,10 @@ class UpdatePrompts private constructor(
         val downloads = apkUpdates ?: return
         val activity = activityReference.get() ?: return
         when (status.stage) {
-            ApkUpdateStatus.Stage.QUEUED, ApkUpdateStatus.Stage.DOWNLOADING, ApkUpdateStatus.Stage.VERIFYING -> downloads.cancel()
+            ApkUpdateStatus.Stage.QUEUED, ApkUpdateStatus.Stage.DOWNLOADING, ApkUpdateStatus.Stage.VERIFYING -> {
+                minimizedJobs.remove(channel)
+                downloads.cancel()
+            }
             ApkUpdateStatus.Stage.READY -> downloads.install(activity)
             ApkUpdateStatus.Stage.FAILED -> {
                 downloads.hideFailure()
